@@ -1,5 +1,5 @@
 ﻿namespace _EvEMap.Scripts.Core {
-    public class Game {
+    public class GameStateInitialization {
         
     }
 }
