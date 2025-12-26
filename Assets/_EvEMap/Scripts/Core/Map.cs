@@ -21,6 +21,16 @@ public class Map : Singleton<Map> {
     void Start() {
         InitializeMapData().Forget();
     }
+    
+    public void SelectSystem(UISystem system) {
+        for (int i = 0; i < systems.Count; i++) {
+            systems[i].SetSelected(false);
+        }
+
+        system.SetSelected(true);
+        UIManager.Instance.HideSystemInfo();
+        UIManager.Instance.ShowSystemInfo(system.SystemInfo, system.transform.position).Forget();
+    }
 
     private async UniTask InitializeMapData() {
         var client = new HttpClient();
@@ -82,15 +92,7 @@ public class Map : Singleton<Map> {
         }
     }
 
-    public void SelectSystem(UISystem system) {
-        for (int i = 0; i < systems.Count; i++) {
-            systems[i].SetSelected(false);
-        }
-
-        system.SetSelected(true);
-        UIManager.Instance.HideSystemInfo();
-        UIManager.Instance.ShowSystemInfo(system.SystemInfo, system.transform.position).Forget();
-    }
+    
 
     private async UniTask<List<long>> GetConstellationIDs(HttpClient client = null) {
         UIManager.Instance.SetProgressBarVisibility(true);
@@ -388,8 +390,8 @@ public class Map : Singleton<Map> {
             system.Init(systemInfo);
             system.transform.position = new Vector3((float)systemInfo.position.x, (float)systemInfo.position.y, (float)systemInfo.position.z) * SystemDistanceScaling;
             system.transform.localScale = Vector3.one * SystemObjectScaling;
-
         }
+        
         */
     }
 }

@@ -9,21 +9,7 @@ namespace _ProjectEvE.Scripts.Data {
         public List<long> SystemIDs = new();
         public Dictionary<long, SystemInfo> SystemInfos = new();
         public Dictionary<long, ConstellationInfo> ConstellationInfos = new();
-
-        /*
-        public MapData(MapData data) {
-            RegionIDs = data.RegionIDs != null ? new List<long>(data.RegionIDs) : new ();
-            SystemIDs = data.SystemIDs != null ? new List<long>(data.SystemIDs) : new ();
-            SystemInfos = data.SystemInfos != null ? new Dictionary<long, SystemInfo>(data.SystemInfos) : new ();
-        }
         
-
-        public MapData() {
-            RegionIDs = new();
-            SystemIDs = new();
-            SystemInfos = new();
-        }
-        */
 
         public bool IsEmpty() {
             if (SystemIDs == null || SystemIDs.Count == 0) return true;
