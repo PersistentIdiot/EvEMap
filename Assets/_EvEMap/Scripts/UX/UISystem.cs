@@ -30,16 +30,7 @@ namespace _ProjectEvE.Scripts.UX {
         }
 
         private void OnMouseUp() {
-            SetSelected(false);
-        }
-
-        public static Color GetColorFromSecurityStatus(float securityStatus) {
-            if (securityStatus < 0) {
-                return new Color(Math.Abs(securityStatus), 0, 0);
-            }
-            else {
-                return new Color(0, securityStatus, 0);
-            }
+            // SetSelected(false);
         }
 
         public void SetSelected(bool value) {
@@ -55,6 +46,15 @@ namespace _ProjectEvE.Scripts.UX {
                 var color = new Color(0, 0, 0);
                 wideOutlineSettings.Outlines[0].color = color;
                 outline.gameObject.SetActive(false);
+            }
+        }
+        
+        public static Color GetColorFromSecurityStatus(float securityStatus) {
+            if (securityStatus < 0) {
+                return new Color(Math.Abs(securityStatus), 0, 0);
+            }
+            else {
+                return new Color(0, securityStatus, 0);
             }
         }
     }

@@ -423,11 +423,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SystemPrefab: {fileID: 3358020166418241665, guid: 38c81b6fb305dca479021d435958877e,
     type: 3}
-  Data:
-    RegionIDs: 
-    SystemIDs: 
-    SystemInfos: []
-  SystemDistanceScaling: 1e-16
+  Data: {fileID: 11400000, guid: db4704d77f433614c87c32fb476ec565, type: 2}
+  SystemDistanceScaling: 0.000000001
   SystemObjectScaling: 0.125
 --- !u!1 &324262209
 GameObject:
@@ -1737,7 +1734,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Getting system information (G9NE-B)
+  m_text: Getting system information (QPTT-F)
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6bdb9c1d8b3ace1408d2de12e30ae744, type: 2}
   m_sharedMaterial: {fileID: -8965312031696399558, guid: 6bdb9c1d8b3ace1408d2de12e30ae744,
@@ -1909,7 +1906,7 @@ RectTransform:
   m_Father: {fileID: 1256587162}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0.06745703, y: 1}
+  m_AnchorMax: {x: 0.08547718, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2080,7 +2077,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a9f66bd5fa24af44e93d048b661c10fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  value: 0.06745703
+  value: 0.08547718
   minValue: 0
   maxValue: 1
   invokeAtStart: 0
@@ -2527,7 +2524,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 6.7%
+  m_text: 8.5%
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6bdb9c1d8b3ace1408d2de12e30ae744, type: 2}
   m_sharedMaterial: {fileID: -8965312031696399558, guid: 6bdb9c1d8b3ace1408d2de12e30ae744,
