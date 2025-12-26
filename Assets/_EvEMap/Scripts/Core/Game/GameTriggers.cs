@@ -1,5 +1,6 @@
 ﻿namespace _EvEMap.Scripts.Core {
-    public class GameTriggers {
-        
+    public enum GameTriggers {
+        EnterMenu,
+        EnterMap
     }
 }

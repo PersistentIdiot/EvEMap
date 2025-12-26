@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.bewildered.smart-library": {
+      "version": "file:com.bewildered.smart-library",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,

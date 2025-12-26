@@ -1,5 +1,7 @@
 ﻿namespace _EvEMap.Scripts.Core {
-    public class GameStates {
-        
+    public enum GameStates {
+        Initial,
+        Menu,
+        Map
     }
 }
