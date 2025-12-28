@@ -285,7 +285,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   loadingMode: 0
-  presetName: Standard
+  presetName: Futuristic
   enableTrigger: 0
   onTriggerExit: 0
   loadWithTag: 0
@@ -300,7 +300,7 @@ MonoBehaviour:
   - {fileID: 8643118620972578112, guid: da9ecdb2e25bea342b5be62a75cc51e7, type: 3}
   - {fileID: 8448866507439987890, guid: 54f98e891bed80f4684d3cf5e66899b5, type: 3}
   - {fileID: 8985211846813716763, guid: 2e032f973bfa7da4b95039db5496ee9a, type: 3}
-  selectedLoadingIndex: 4
+  selectedLoadingIndex: 2
   selectedTagIndex: 0
   onLoadingStart:
     m_PersistentCalls:
@@ -525,13 +525,13 @@ MonoBehaviour:
   MenuScene:
     _sceneOB: {fileID: 102900000, guid: f42f9c9bb59274541b6718fc33e037b4, type: 3}
     _name: Menu
-    _path: 
-    _buildIndex: -1
+    _path: Assets/_EvEMap/Scenes/Menu.unity
+    _buildIndex: 1
   MapScene:
     _sceneOB: {fileID: 102900000, guid: 5589af3d604fd624cb136e8220c6a13f, type: 3}
     _name: Map
     _path: Assets/_EvEMap/Scenes/Map.unity
-    _buildIndex: 1
+    _buildIndex: 2
   LoadingManager: {fileID: 535289082}
   CurrentState: 0
 --- !u!4 &990411407

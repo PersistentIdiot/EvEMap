@@ -9,5 +9,5 @@ public class ConstellationInfo {
     public string name;
     public Position position;
     public long region_id;
-    private long[] systems;
+    public long[] systems;
 }

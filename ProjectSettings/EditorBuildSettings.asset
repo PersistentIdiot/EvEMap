@@ -9,6 +9,9 @@ EditorBuildSettings:
     path: Assets/_EvEMap/Scenes/Initial.unity
     guid: 36def45013b0ba1479840dd0c926b2d2
   - enabled: 1
+    path: Assets/_EvEMap/Scenes/Menu.unity
+    guid: f42f9c9bb59274541b6718fc33e037b4
+  - enabled: 1
     path: Assets/_EvEMap/Scenes/Map.unity
     guid: 5589af3d604fd624cb136e8220c6a13f
   m_configObjects: {}

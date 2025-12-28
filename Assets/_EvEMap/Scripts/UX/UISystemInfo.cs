@@ -16,7 +16,7 @@ namespace _ProjectEvE.Scripts.UX {
 
         public async UniTask SetSystemInfo(SystemInfo info) {
             systemInfo = info;
-            var stargateInfos = await Map.Instance.Data.GetStargateInfos(systemInfo);
+            var stargateInfos = await Map.Data.GetStargateInfos(systemInfo);
             TitleText.text = $"{systemInfo.name} <color=#{ColorUtility.ToHtmlStringRGB(UISystem.GetColorFromSecurityStatus(systemInfo.security_status))}>({systemInfo.security_status:N1}</color>)";
             DescriptionText.text = "";
             foreach (var stargateInfo in stargateInfos) {

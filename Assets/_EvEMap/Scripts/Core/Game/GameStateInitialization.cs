@@ -15,7 +15,7 @@ namespace _EvEMap.Scripts.Core {
                 .Permit(GameTriggers.EnterMenu, GameStates.Menu)
                 .OnExit(
                 () => {
-                    LoadingManager.LoadScene(MapScene.Name);
+                    LoadingManager.LoadScene(MenuScene.Name);
                 });
 
             stateMachine.Configure(GameStates.Menu)
@@ -23,6 +23,9 @@ namespace _EvEMap.Scripts.Core {
                 ;
 
             stateMachine.Configure(GameStates.Map)
+                .OnEntry(() => {
+                    LoadingManager.LoadScene(MapScene.Name);
+                })
                 .Permit(GameTriggers.EnterMenu, GameStates.Menu)
                 ;
         }

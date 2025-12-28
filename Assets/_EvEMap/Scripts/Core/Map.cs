@@ -11,11 +11,12 @@ using SystemInfo = _ProjectEvE.Scripts.Data.SystemInfo;
 
 public class Map : Singleton<Map> {
     [SerializeField] private UISystem SystemPrefab;
-    public MapData Data;
-    public float SystemDistanceScaling = 0.01f;
+    public static MapData Data { get => Instance.data; }
+    [SerializeField] private MapData data;
+    public double SystemDistanceScaling = 1000000;
     public float SystemObjectScaling = 0.125f;
 
-    [SerializeField] private Dictionary<long,UISystem> systems = new();
+    [SerializeField] private UISystemDictionary systems = new();
 
     // Start is called before the first frame update
     void Start() {
@@ -24,12 +25,12 @@ public class Map : Singleton<Map> {
 
     private async UniTask InitializeDisplay() {
         await Data.InitializeMapData(new HttpClient());
-        //await DisplaySystems(Data.SystemInfos);
+        await DisplaySystems(Data.SystemInfos);
     }
-    
+
     public async UniTask SelectSystem(UISystem system) {
-        for (int i = 0; i < systems.Count; i++) {
-            systems[i].SetSelected(false);
+        foreach (var kvp in systems) {
+            kvp.Value.SetSelected(false);
         }
 
         system.SetSelected(true);
@@ -37,7 +38,9 @@ public class Map : Singleton<Map> {
         await UIManager.Instance.ShowSystemInfo(system.SystemInfo, system.transform.position);
     }
 
-    private async UniTask DisplaySystems(SystemInfosDictionary systemInfos) {
+    private async UniTask DisplaySystems(Dictionary<long, SystemInfo> systemInfos) {
+        Debug.Log($"Displaying systems");
+        int systemsThisBatch = 0;
         foreach (var kvp in systemInfos) {
             var systemInfo = kvp.Value;
 
@@ -45,12 +48,24 @@ public class Map : Singleton<Map> {
                 Debug.Log($"System info for key {kvp.Key} was null");
                 continue;
             }
+
+            if (systemInfo.system_id >= 30999999) continue;
+
             var system = Instantiate(SystemPrefab, transform);
-            
-            systems.Add(kvp.Key, system);
+            systemsThisBatch++;
+
+            if (systemsThisBatch > 10) {
+                systemsThisBatch = 0;
+                await UniTask.WaitForEndOfFrame();
+            }
+
             system.Init(systemInfo);
-            system.transform.position = new Vector3((float)systemInfo.position.x, (float)systemInfo.position.y, (float)systemInfo.position.z) * SystemDistanceScaling;
+            system.transform.position = new Vector3(
+                (float)(systemInfo.position.x / SystemDistanceScaling),
+                (float)(systemInfo.position.y / SystemDistanceScaling),
+                (float)(systemInfo.position.z / SystemDistanceScaling));
             system.transform.localScale = Vector3.one * SystemObjectScaling;
+            systems.Add(kvp.Key, system);
         }
     }
 }

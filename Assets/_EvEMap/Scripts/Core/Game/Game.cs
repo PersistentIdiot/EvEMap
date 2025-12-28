@@ -15,6 +15,7 @@ namespace _EvEMap.Scripts.Core {
         private StateMachine<GameStates, GameTriggers> stateMachine;
 
         private void OnEnable() {
+            DontDestroyOnLoad(this);
             if (stateMachine == null) {
                 InitStateMachine();
             }
@@ -22,6 +23,10 @@ namespace _EvEMap.Scripts.Core {
 
         public static async UniTask FireTrigger(GameTriggers trigger) {
             await Instance.stateMachine.FireAsync(trigger);
+        }
+
+        public void Quit() {
+            Application.Quit();
         }
     }
 }

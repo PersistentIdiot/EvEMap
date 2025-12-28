@@ -1,4 +1,5 @@
 ﻿using System;
+using Cysharp.Threading.Tasks;
 using Linework.WideOutline;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -7,6 +8,7 @@ using SystemInfo = _ProjectEvE.Scripts.Data.SystemInfo;
 
 namespace _ProjectEvE.Scripts.UX {
     public class UISystem : MonoBehaviour {
+        public float DoubleClickDelay = 0.5f;
         public SystemInfo SystemInfo;
 
         [SerializeField] private WideOutlineSettings wideOutlineSettings;
@@ -14,6 +16,7 @@ namespace _ProjectEvE.Scripts.UX {
         [SerializeField] private Renderer outline;
         [SerializeField] private Renderer model;
         [SerializeField] private bool selected = false;
+        private float lastClickTime = 0.5f;
 
         public void Init(SystemInfo systemInfo) {
             Debug.Assert(systemInfo != null);
@@ -26,7 +29,20 @@ namespace _ProjectEvE.Scripts.UX {
         }
 
         private void OnMouseDown() {
-            Map.Instance.SelectSystem(this);
+            if (Time.time - lastClickTime <= DoubleClickDelay) {
+                Debug.Log($"Double clicked!");
+                
+                if (Camera.main!.TryGetComponent(out FlyCam flyCam)) {
+                    flyCam.ZoomToSystem(this);
+                }
+            }
+            else {
+                Debug.Log($"Clicked");
+            }
+
+
+            lastClickTime = Time.time;
+            Map.Instance.SelectSystem(this).Forget();
         }
 
         private void OnMouseUp() {

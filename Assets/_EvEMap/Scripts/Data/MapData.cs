@@ -1,34 +1,57 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using _EvEMap.Scripts.Core;
 using _ProjectEvE.Scripts.Utilities;
 using _ProjectEvE.Scripts.UX;
 using Cysharp.Threading.Tasks;
+using Evo.UI;
+using Sirenix.OdinInspector;
 using UnityEngine;
+using Constants = _EvEMap.Scripts.Core.Constants;
 
 namespace _ProjectEvE.Scripts.Data {
     [CreateAssetMenu(menuName = "EvE Map/Data", fileName = "Map Data")]
-    public class MapData : ScriptableObject {
-        public List<Int64> ConstellationIDs = new();
-        public List<Int64> RegionIDs = new();
-        public List<Int64> SystemIDs = new();
-        public SystemInfosDictionary SystemInfos = new();
-        public ConstellationInfosDictionary ConstellationInfos = new();
+    public class MapData : SerializedScriptableObject {
+        public List<long> ConstellationIDs {
+            get {
+                if (constellationIDs != null && constellationIDs.Count == Constants.ConstellationCount) {
+                    return constellationIDs;
+                }
+                else {
+                    if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.ConstellationIDsKey)) {
+                        Debug.Log($"Loading Constellation IDs from file");
+                        constellationIDs = ES3.Load<List<long>>(Constants.ConstellationIDsKey, Constants.SaveFileName);
+                    }
+
+                    if (constellationIDs == null) {
+                        Debug.Log($"Failed to load ConstellationIDs from disk. Unable to rebuild here. ");
+                    }
+
+                    return new List<long>();
+                }
+            }
+            set { constellationIDs = value; }
+        }
+        [SerializeField] private List<long> constellationIDs;
+        public List<long> RegionIDs;
+        public List<long> SystemIDs;
+        public Dictionary<long, ConstellationInfo> ConstellationInfos = new();
+        public Dictionary<long, RegionInfo> RegionInfos = new();
+        public Dictionary<long, SystemInfo> SystemInfos = new();
 
 
         public async UniTask InitializeMapData(HttpClient client = null) {
             client ??= new HttpClient();
 
             // Constellation IDs
-            if (ConstellationIDs.Count < Constants.ConstellationCount) {
+            if (constellationIDs.Count < Constants.ConstellationCount) {
                 if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.ConstellationIDsKey)) {
                     Debug.Log($"Loading Constellation IDs from file");
-                    ConstellationIDs = ES3.Load<List<long>>(Constants.ConstellationIDsKey);
+                    constellationIDs = ES3.Load<List<long>>(Constants.ConstellationIDsKey);
                 }
                 else {
                     Debug.Log($"Pulling Constellation IDs from EvE");
-                    ConstellationIDs = await GetConstellationIDs(client);
+                    constellationIDs = await GetConstellationIDs(client);
                     ES3.Save(Constants.ConstellationIDsKey, ConstellationIDs);
                 }
             }
@@ -37,7 +60,7 @@ namespace _ProjectEvE.Scripts.Data {
             if (ConstellationInfos.Count < Constants.ConstellationCount) {
                 if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.ConstellationInfosKey)) {
                     Debug.Log($"Loading Constellation Infos from file");
-                    ConstellationInfos = ES3.Load<ConstellationInfosDictionary>(Constants.ConstellationInfosKey, Constants.SaveFileName);
+                    ConstellationInfos = ES3.Load<Dictionary<long, ConstellationInfo>>(Constants.ConstellationInfosKey, Constants.SaveFileName);
                 }
                 else {
                     Debug.Log($"Pulling Constellation Infos from EvE");
@@ -60,6 +83,19 @@ namespace _ProjectEvE.Scripts.Data {
                 }
             }
 
+            // Region Infos
+            if (RegionInfos.Count < Constants.RegionCount) {
+                if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.RegionInfosKey)) {
+                    Debug.Log($"Loading Region Infos from file");
+                    RegionInfos = ES3.Load<Dictionary<long, RegionInfo>>(Constants.RegionInfosKey, Constants.SaveFileName);
+                }
+                else {
+                    Debug.Log($"Pulling Region Infos from EvE");
+                    RegionInfos = await GetRegionInfos(RegionIDs, client);
+                    ES3.Save(Constants.RegionInfosKey, RegionInfos, Constants.SaveFileName);
+                }
+            }
+
             // SystemIDs
             if (SystemIDs.Count < Constants.SystemCount) {
                 if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.SystemIDsKey)) {
@@ -74,24 +110,23 @@ namespace _ProjectEvE.Scripts.Data {
             }
 
             // SystemInfos
-            if (SystemIDs.Count < Constants.SystemCount) {
+            if (SystemInfos.Count < Constants.SystemCount) {
                 if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.SystemInfosKey)) {
                     Debug.Log($"Loading System Infos from file");
-                    SystemInfos = ES3.Load<SystemInfosDictionary>(Constants.SystemInfosKey, Constants.SaveFileName);
+                    SystemInfos = ES3.Load<Dictionary<long, SystemInfo>>(Constants.SystemInfosKey, Constants.SaveFileName);
                 }
                 else {
                     Debug.Log($"Pulling System Infos from EvE");
-                    SystemInfos = await GetSystemInfos(SystemIDs, client);
+                    SystemInfos = await GetKspaceInfos(SystemIDs, client);
                     ES3.Save(Constants.SystemInfosKey, SystemInfos, Constants.SaveFileName);
                 }
             }
         }
 
 
-        private async UniTask<List<long>> GetConstellationIDs(HttpClient client = null) {
-            UIManager.Instance.SetProgressBarVisibility(true);
+        public async UniTask<List<long>> GetConstellationIDs(HttpClient client = null) {
             client ??= new HttpClient();
-            List<long> constellationIDs = new();
+            List<long> returnValue = new();
 
             var request = new HttpRequestMessage {
                 Method = HttpMethod.Get,
@@ -121,7 +156,7 @@ namespace _ProjectEvE.Scripts.Data {
                     UIManager.Instance.ProgressBar.Value = (float)index / constellationIDStrings.Length;
 
                     if (long.TryParse(constellationIDString, out long constellationID)) {
-                        constellationIDs.Add(constellationID);
+                        returnValue.Add(constellationID);
                     }
                     else {
                         Debug.Log($"Failed to parse ConstellationID: {constellationIDString}");
@@ -130,13 +165,13 @@ namespace _ProjectEvE.Scripts.Data {
             }
 
             UIManager.Instance.SetProgressBarVisibility(false);
-            return constellationIDs;
+            return returnValue;
         }
 
-        private async UniTask<ConstellationInfosDictionary> GetConstellationInfos(List<long> systemIDs, HttpClient client = null) {
+        public async UniTask<Dictionary<long, ConstellationInfo>> GetConstellationInfos(List<long> systemIDs, HttpClient client = null) {
             UIManager.Instance.SetProgressBarVisibility(true);
             client ??= new HttpClient();
-            ConstellationInfosDictionary constellationInfos = new();
+            Dictionary<long, ConstellationInfo> constellationInfos = new();
 
             for (int index = 0; index < systemIDs.Count; index++) {
                 var systemID = systemIDs[index];
@@ -149,14 +184,14 @@ namespace _ProjectEvE.Scripts.Data {
             return constellationInfos;
         }
 
-        private async UniTask<ConstellationInfo> GetConstellationInfo(long systemID, HttpClient client = null) {
+        public async UniTask<ConstellationInfo> GetConstellationInfo(long systemID, HttpClient client = null) {
             client ??= new HttpClient();
             var request = new HttpRequestMessage {
                 Method = HttpMethod.Get,
                 RequestUri = new Uri($"https://esi.evetech.net/universe/constellations/{systemID}"),
                 Headers = {
                     {
-                        "Accept-Language", ""
+                        "Accept-Language", "en"
                     }, {
                         "X-Compatibility-Date", "2025-12-16"
                     }, {
@@ -175,7 +210,49 @@ namespace _ProjectEvE.Scripts.Data {
             }
         }
 
-        private async UniTask<List<long>> GetSystemIDs(HttpClient client = null) {
+        public async UniTask<Dictionary<long, RegionInfo>> GetRegionInfos(List<long> regionIDs, HttpClient client = null) {
+            client ??= new HttpClient();
+            Dictionary<long, RegionInfo> returnValue = new Dictionary<long, RegionInfo>();
+
+            foreach (var regionID in regionIDs) {
+                var regionInfo = await GetRegionInfo(regionID, client);
+                returnValue.Add(regionID, regionInfo);
+            }
+
+            return returnValue;
+        }
+
+        public async UniTask<RegionInfo> GetRegionInfo(long regionID, HttpClient client = null) {
+            if (RegionInfos.TryGetValue(regionID, out RegionInfo regionInfo)) {
+                return regionInfo;
+            }
+            
+            
+            client ??= new HttpClient();
+            var request = new HttpRequestMessage {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri($"https://esi.evetech.net/universe/regions/{regionID}"),
+                Headers = {
+                    {
+                        "Accept-Language", "en"
+                    }, {
+                        "X-Compatibility-Date", "2025-12-16"
+                    }, {
+                        "X-Tenant", ""
+                    }, {
+                        "Accept", "application/json"
+                    },
+                },
+            };
+
+            using (var response = await client.SendAsync(request)) {
+                response.EnsureSuccessStatusCode();
+                var body = await response.Content.ReadAsStringAsync();
+                return JsonUtility.FromJson<RegionInfo>(body);
+            }
+        }
+
+        public async UniTask<List<long>> GetSystemIDs(HttpClient client = null) {
             UIManager.Instance.SetProgressBarVisibility(true);
             List<long> returnValue = new();
             client ??= new HttpClient();
@@ -224,12 +301,15 @@ namespace _ProjectEvE.Scripts.Data {
         }
 
         public async UniTask<List<StargateInfo>> GetStargateInfos(SystemInfo systemInfo) {
-
+            Debug.Assert(systemInfo!=null);
             UIManager.Instance.SetProgressBarVisibility(true);
             List<StargateInfo> returnValue = new();
             var client = new HttpClient();
 
-            // Send system info requests
+            if (systemInfo.stargates == null) {
+                systemInfo.stargates = Array.Empty<long>();
+            }
+            // Send stargate info requests
             for (int index = 0; index < systemInfo.stargates.Length; index++) {
                 UIManager.Instance.ProgressBar.Value = (float)index / systemInfo.stargates.Length;
                 long ID = systemInfo.stargates[index];
@@ -277,13 +357,15 @@ namespace _ProjectEvE.Scripts.Data {
         /// <param name="systemIDs"></param>
         /// <param name="httpClient"></param>
         /// <returns></returns>
-        private async UniTask<SystemInfosDictionary> GetSystemInfos(List<long> systemIDs, HttpClient client) {
+        public async UniTask<SystemInfosDictionary> GetKspaceInfos(List<long> systemIDs, HttpClient client = null, ProgressBar progressBar = null) {
             UIManager.Instance.SetProgressBarVisibility(true);
             SystemInfosDictionary returnValue = new();
             client ??= new HttpClient();
 
             // Send system info requests
             for (int index = 0; index < systemIDs.Count; index++) {
+                if (systemIDs[index] >= 30999999) continue;
+                UIManager.Instance.SetProgressBarVisibility(true);
                 UIManager.Instance.ProgressBar.Value = (float)index / systemIDs.Count;
                 long ID = systemIDs[index];
 
@@ -295,7 +377,7 @@ namespace _ProjectEvE.Scripts.Data {
             return returnValue;
         }
 
-        private async UniTask<SystemInfo> GetSystemInfo(long systemID, HttpClient client = null) {
+        public async UniTask<SystemInfo> GetSystemInfo(long systemID, HttpClient client = null) {
             client ??= new HttpClient();
             var request = new HttpRequestMessage {
                 Method = HttpMethod.Get,
@@ -331,7 +413,7 @@ namespace _ProjectEvE.Scripts.Data {
 
         }
 
-        private async UniTask<List<long>> GetRegionIDs(HttpClient client = null) {
+        public async UniTask<List<long>> GetRegionIDs(HttpClient client = null) {
             UIManager.Instance.SetProgressBarVisibility(true);
             List<long> returnValue = new();
             client ??= new HttpClient();

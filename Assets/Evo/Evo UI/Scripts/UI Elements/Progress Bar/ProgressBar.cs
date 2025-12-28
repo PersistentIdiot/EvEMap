@@ -31,6 +31,7 @@ namespace Evo.UI
         [EvoHeader("References", Constants.CUSTOM_EDITOR_ID)]
         public RectTransform fillRect;
         public TMP_Text valueText;
+        public TMP_Text labelText;
 
         [EvoHeader("Events", Constants.CUSTOM_EDITOR_ID)]
         public ProgressBarEvent onValueChanged = new();

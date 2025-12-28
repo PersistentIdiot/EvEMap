@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,13 +6,11 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace Evo.UI
-{
+namespace Evo.UI {
     [DisallowMultipleComponent]
     [HelpURL(Constants.HELP_URL + "ui-elements/dropdown")]
     [AddComponentMenu("Evo/UI/UI Elements/Dropdown")]
-    public class Dropdown : MonoBehaviour
-    {
+    public class Dropdown : MonoBehaviour {
         [EvoHeader("Item List", Constants.CUSTOM_EDITOR_ID)]
         public int selectedIndex = 0;
         public List<Item> items = new();
@@ -37,11 +36,11 @@ namespace Evo.UI
         [Range(0.1f, 2)] public float animationDuration = 0.3f;
         public AnimationCurve animationCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
-#if EVO_LOCALIZATION
+    #if EVO_LOCALIZATION
         [EvoHeader("Localization", Constants.CUSTOM_EDITOR_ID)]
         public bool enableLocalization = true;
         public Localization.LocalizedObject localizedObject;
-#endif
+    #endif
 
         [EvoHeader("References", Constants.CUSTOM_EDITOR_ID)]
         public GameObject itemPrefab;
@@ -80,23 +79,20 @@ namespace Evo.UI
         readonly List<Button> itemButtons = new();
         readonly Dictionary<Button, Navigation> previousItemNavigations = new();
 
-        public enum DropdownState
-        {
+        public enum DropdownState {
             Closed,
             Opening,
             Open,
             Closing
         }
 
-        public enum AnimationType
-        {
+        public enum AnimationType {
             Fade = 0,
             Scale = 1,
             Slide = 2
         }
 
-        public enum ScrollbarPosition
-        {
+        public enum ScrollbarPosition {
             LastPosition = 0,
             SelectedItem = 1,
             Top = 2,
@@ -104,34 +100,30 @@ namespace Evo.UI
         }
 
         [System.Serializable]
-        public class Item
-        {
+        public class Item {
             public string label = "Item";
             public Sprite icon;
             [HideInInspector] public int index;
             [HideInInspector] public Button generatedButton;
 
-#if EVO_LOCALIZATION
+        #if EVO_LOCALIZATION
             [Header("Localization")]
             public string tableKey;
-#endif
+        #endif
 
-            public Item(string label, Sprite icon = null)
-            {
+            public Item(string label, Sprite icon = null) {
                 this.label = label;
                 this.icon = icon;
             }
         }
 
-        void Awake()
-        {
+        void Awake() {
             Initialize();
-            GenerateItems();
+            GenerateItems(null);
         }
 
-        void Start()
-        {
-#if EVO_LOCALIZATION
+        void Start() {
+        #if EVO_LOCALIZATION
             if (enableLocalization)
             {
                 localizedObject = Localization.LocalizedObject.Check(gameObject);
@@ -141,35 +133,31 @@ namespace Evo.UI
                     UpdateLocalization();
                 }
             }
-#endif
+        #endif
 
             // Auto-select valid index or clear selection
-            if (selectedIndex >= 0 && selectedIndex < items.Count)
-            {
+            if (selectedIndex >= 0 && selectedIndex < items.Count) {
                 UpdateHeader(items[selectedIndex]);
                 selectedItem = items[selectedIndex];
                 selectedItem.generatedButton.SetState(InteractionState.Selected);
             }
-            else
-            {
+            else {
                 selectedIndex = -1;
                 selectedItem = null;
                 UpdateHeader();
             }
         }
 
-        void OnEnable()
-        {
+        void OnEnable() {
             UpdateUI();
             SetState(DropdownState.Closed, true);
         }
 
-        void OnDisable()
-        {
+        void OnDisable() {
             // Set state immediate and stop any running animation
             if (dropdownState != DropdownState.Closed) { SetState(DropdownState.Closed, true); }
-            if (currentAnimation != null)
-            {
+
+            if (currentAnimation != null) {
                 StopCoroutine(currentAnimation);
                 currentAnimation = null;
             }
@@ -177,31 +165,28 @@ namespace Evo.UI
             DestroyBlocker();
         }
 
-        void OnDestroy()
-        {
+        void OnDestroy() {
             DestroyBlocker();
 
-#if EVO_LOCALIZATION
+        #if EVO_LOCALIZATION
             if (enableLocalization && localizedObject != null)
             {
                 Localization.LocalizationManager.OnLanguageSet -= UpdateLocalization;
             }
-#endif
+        #endif
         }
 
-        void Initialize()
-        {
-            if (scrollRect != null)
-            {
+        void Initialize() {
+            if (scrollRect != null) {
                 RectTransform scrollRT = scrollRect.GetComponent<RectTransform>();
                 originalScrollScale = scrollRT.localScale;
                 scrollRT.localScale = animationType == AnimationType.Scale ? Vector3.zero : originalScrollScale;
 
                 // Setup scroll rect drag detection
-                if (!scrollRect.gameObject.TryGetComponent<DropdownScrollDragHandler>(out var scrollDragHandler))
-                {
+                if (!scrollRect.gameObject.TryGetComponent<DropdownScrollDragHandler>(out var scrollDragHandler)) {
                     scrollDragHandler = scrollRect.gameObject.AddComponent<DropdownScrollDragHandler>();
                 }
+
                 scrollDragHandler.onBeginDrag.RemoveAllListeners();
                 scrollDragHandler.onEndDrag.RemoveAllListeners();
                 scrollDragHandler.onBeginDrag.AddListener(() => isDragging = true);
@@ -209,21 +194,18 @@ namespace Evo.UI
             }
 
             // Setup header button
-            if (headerButton != null)
-            {
+            if (headerButton != null) {
                 headerButton.onClick.AddListener(Toggle);
-                headerButton.onSubmit.AddListener(() =>
-                {
-                    if (itemParent.childCount > 0)
-                    {
-                        Utilities.SetSelectedObject(itemParent.GetChild(0).gameObject);
-                    }
-                });
+                headerButton.onSubmit.AddListener(
+                    () => {
+                        if (itemParent.childCount > 0) {
+                            Utilities.SetSelectedObject(itemParent.GetChild(0).gameObject);
+                        }
+                    });
             }
         }
 
-        void SetScrollbarPosition()
-        {
+        void SetScrollbarPosition() {
             if (scrollRect == null || scrollRect.verticalScrollbar == null)
                 return;
 
@@ -232,8 +214,7 @@ namespace Evo.UI
             else if (scrollbarPosition == ScrollbarPosition.SelectedItem) { scrollRect.SnapToElementInstant(selectedIndex, -(itemHeight * 2)); }
         }
 
-        void UpdateHeader(Item item = null)
-        {
+        void UpdateHeader(Item item = null) {
             if (headerButton == null || item == null)
                 return;
 
@@ -241,18 +222,17 @@ namespace Evo.UI
             headerButton.SetIcon(item.icon);
         }
 
-        void GenerateItems()
-        {
+        void GenerateItems(List<Action> onClickActions) {
             if (itemPrefab == null || itemParent == null)
                 return;
 
             // Clear existing items
             itemButtons.Clear();
+
             for (int i = itemParent.childCount - 1; i >= 0; i--) { Destroy(itemParent.GetChild(i).gameObject); }
 
             // Generate new items
-            for (int i = 0; i < items.Count; i++)
-            {
+            for (int i = 0; i < items.Count; i++) {
                 var item = items[i];
                 item.index = i;
 
@@ -265,28 +245,28 @@ namespace Evo.UI
             }
         }
 
-        void SetupItemButton(Button button, Item item)
-        {
+        void SetupItemButton(Button button, Item item, Action onClickAction = null) {
             // Pass the button
             item.generatedButton = button;
 
             // Setup click event
             button.onClick.AddListener(() => SelectItem(item.index));
-            button.onSelect.AddListener(() =>
-            {
-                if (scrollRect == null || !IsOpen)
-                    return;
+            button.onClick.AddListener(() => onClickAction?.Invoke());
+            button.onSelect.AddListener(
+                () => {
+                    if (scrollRect == null || !IsOpen)
+                        return;
 
-                int index = itemButtons.IndexOf(button);
-                if (index >= 0) { scrollRect.SnapToElementInstant(index, -(itemHeight * 0.5f)); }
-            });
-            button.onSubmit.AddListener(() =>
-            {
-                if (headerButton != null)
-                {
-                    Utilities.SetSelectedObject(headerButton.gameObject);
-                }
-            });
+                    int index = itemButtons.IndexOf(button);
+
+                    if (index >= 0) { scrollRect.SnapToElementInstant(index, -(itemHeight * 0.5f)); }
+                });
+            button.onSubmit.AddListener(
+                () => {
+                    if (headerButton != null) {
+                        Utilities.SetSelectedObject(headerButton.gameObject);
+                    }
+                });
 
             // Set item height
             RectTransform rt = button.GetComponent<RectTransform>();
@@ -297,11 +277,9 @@ namespace Evo.UI
             button.SetIcon(item.icon);
         }
 
-        void RestrictNavigation()
-        {
+        void RestrictNavigation() {
             // Save and disable header button navigation
-            if (headerButton != null)
-            {
+            if (headerButton != null) {
                 previousHeaderNavigation = headerButton.navigation.mode;
                 Navigation nav = headerButton.navigation;
                 nav.mode = Navigation.Mode.None;
@@ -310,93 +288,87 @@ namespace Evo.UI
 
             // Save item navigations and set them up in a loop
             previousItemNavigations.Clear();
-            for (int i = 0; i < itemButtons.Count; i++)
-            {
+
+            for (int i = 0; i < itemButtons.Count; i++) {
                 Button btn = itemButtons[i];
                 previousItemNavigations[btn] = btn.navigation;
-                Navigation nav = new() { mode = Navigation.Mode.Explicit };
+                Navigation nav = new() {
+                    mode = Navigation.Mode.Explicit
+                };
 
                 // Set up navigation
                 if (i > 0) { nav.selectOnUp = itemButtons[i - 1]; }
+
                 if (i < itemButtons.Count - 1) { nav.selectOnDown = itemButtons[i + 1]; }
 
                 // Loop around
                 if (i == 0) { nav.selectOnUp = itemButtons[^1]; }
+
                 if (i == itemButtons.Count - 1) { nav.selectOnDown = itemButtons[0]; }
 
                 btn.navigation = nav;
             }
         }
 
-        void RestoreNavigation()
-        {
+        void RestoreNavigation() {
             // Restore header navigation
-            if (headerButton != null)
-            {
+            if (headerButton != null) {
                 Navigation nav = headerButton.navigation;
                 nav.mode = previousHeaderNavigation;
                 headerButton.navigation = nav;
             }
 
             // Restore item navigations
-            foreach (var kvp in previousItemNavigations)
-            {
-                if (kvp.Key != null)
-                {
+            foreach (var kvp in previousItemNavigations) {
+                if (kvp.Key != null) {
                     kvp.Key.navigation = kvp.Value;
                 }
             }
+
             previousItemNavigations.Clear();
         }
 
-        void UpdateLayout()
-        {
-            if (itemParent != null && itemParent.TryGetComponent<VerticalLayoutGroup>(out var vlg))
-            {
+        void UpdateLayout() {
+            if (itemParent != null && itemParent.TryGetComponent<VerticalLayoutGroup>(out var vlg)) {
                 vlg.spacing = itemSpacing;
                 vlg.padding = padding;
             }
 
-            if (scrollRect != null)
-            {
+            if (scrollRect != null) {
                 float contentHeight = CalculateContentHeight();
                 float clampedHeight = Mathf.Min(maxHeight, contentHeight);
 
                 RectTransform scrollRT = scrollRect.GetComponent<RectTransform>();
+
                 if (dropdownState != DropdownState.Closed) { scrollRT.sizeDelta = new Vector2(scrollRT.sizeDelta.x, clampedHeight); }
             }
         }
 
-        void SetState(DropdownState state, bool instant = false)
-        {
+        void SetState(DropdownState state, bool instant = false) {
             dropdownState = state;
 
-            if (scrollRect != null)
-            {
+            if (scrollRect != null) {
                 bool shouldBeActive = state != DropdownState.Closed;
                 scrollRect.gameObject.SetActive(shouldBeActive);
 
                 // Set height to 0 for slide animations when closed
-                if (state == DropdownState.Closed && animationType == AnimationType.Slide)
-                {
+                if (state == DropdownState.Closed && animationType == AnimationType.Slide) {
                     RectTransform scrollRT = scrollRect.GetComponent<RectTransform>();
                     scrollRT.sizeDelta = new Vector2(scrollRT.sizeDelta.x, 0f);
                 }
             }
 
-            if (instant)
-            {
+            if (instant) {
                 if (canvasGroup != null) { canvasGroup.alpha = state == DropdownState.Open ? 1f : 0f; }
-                if (rotateArrow && headerArrow != null)
-                {
+
+                if (rotateArrow && headerArrow != null) {
                     float targetRotation = state == DropdownState.Open ? arrowRotation : 0f;
                     headerArrow.transform.localRotation = Quaternion.Euler(0, 0, targetRotation);
                 }
             }
         }
 
-        void CreateScrollRectCanvas()
-        {
+        void CreateScrollRectCanvas() {
             if (scrollRect == null || scrollRectCanvas != null)
                 return;
 
@@ -408,10 +380,11 @@ namespace Evo.UI
             scrollRectCanvas.sortingOrder = SORTING_ORDER;
         }
 
-        void CreateBlocker()
-        {
+        void CreateBlocker() {
             if (!blockUIWhileOpen || blocker != null) { return; }
+
             if (rootCanvas == null) { rootCanvas = GetComponentInParent<Canvas>().rootCanvas; }
+
             if (rootCanvas == null) { return; }
 
             GameObject blockerGO = new("Dropdown Blocker");
@@ -431,23 +404,24 @@ namespace Evo.UI
             blockerImage.color = Color.clear;
 
             UnityEngine.UI.Button button = blockerGO.AddComponent<UnityEngine.UI.Button>();
-            button.onClick.AddListener(() => { if (!isDragging && closeOnClickOutside) { Close(); } });
+            button.onClick.AddListener(
+                () => {
+                    if (!isDragging && closeOnClickOutside) { Close(); }
+                });
 
             Navigation nav = button.navigation;
             nav.mode = Navigation.Mode.None;
             button.navigation = nav;
         }
 
-        void DestroyBlocker()
-        {
+        void DestroyBlocker() {
             if (blocker == null)
                 return;
 
             Destroy(blocker.gameObject);
         }
 
-        void RestoreOriginalPosition()
-        {
+        void RestoreOriginalPosition() {
             if (scrollRect == null)
                 return;
 
@@ -458,8 +432,7 @@ namespace Evo.UI
             scrollRT.anchoredPosition = originalScrollPosition;
         }
 
-        void CacheCurrentPosition()
-        {
+        void CacheCurrentPosition() {
             if (scrollRect == null)
                 return;
 
@@ -470,8 +443,7 @@ namespace Evo.UI
             originalScrollPosition = scrollRT.anchoredPosition;
         }
 
-        void CheckAndAdjustPosition()
-        {
+        void CheckAndAdjustPosition() {
             if (scrollRect == null)
                 return;
 
@@ -480,6 +452,7 @@ namespace Evo.UI
 
             // Get the root canvas to calculate screen bounds
             if (rootCanvas == null) { rootCanvas = GetComponentInParent<Canvas>().rootCanvas; }
+
             if (rootCanvas == null) { return; }
 
             // Get the header's rect transform
@@ -496,9 +469,9 @@ namespace Evo.UI
 
             // Calculate available space below and above the header
             float headerBottomY = headerCorners[0].y; // Bottom-left corner Y
-            float headerTopY = headerCorners[1].y;    // Top-left corner Y
+            float headerTopY = headerCorners[1].y; // Top-left corner Y
             float canvasBottomY = canvasCorners[0].y; // Canvas bottom
-            float canvasTopY = canvasCorners[2].y;    // Canvas top
+            float canvasTopY = canvasCorners[2].y; // Canvas top
 
             float spaceBelow = headerBottomY - canvasBottomY;
             float spaceAbove = canvasTopY - headerTopY;
@@ -508,13 +481,11 @@ namespace Evo.UI
 
             // If there's not enough space below, check if there's more space above
             // Only open upward if there's more space above than below
-            if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow)
-            {
+            if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
                 shouldOpenUpward = true;
             }
 
-            if (shouldOpenUpward)
-            {
+            if (shouldOpenUpward) {
                 // Position dropdown above the header
                 scrollRT.anchorMin = new Vector2(originalScrollAnchorMin.x, 1f);
                 scrollRT.anchorMax = new Vector2(originalScrollAnchorMax.x, 1f);
@@ -522,8 +493,7 @@ namespace Evo.UI
                 scrollRT.anchoredPosition = new Vector2(originalScrollPosition.x, -originalScrollPosition.y);
             }
 
-            else
-            {
+            else {
                 // Position dropdown below the header (default/original positioning)
                 scrollRT.anchorMin = originalScrollAnchorMin;
                 scrollRT.anchorMax = originalScrollAnchorMax;
@@ -532,16 +502,14 @@ namespace Evo.UI
             }
         }
 
-        float CalculateContentHeight()
-        {
+        float CalculateContentHeight() {
             var paddingToUse = padding;
             float totalHeight = items.Count * itemHeight + (items.Count - 1) * itemSpacing;
             totalHeight += paddingToUse.top + paddingToUse.bottom;
             return totalHeight;
         }
 
-        IEnumerator AnimateDropdown(bool opening)
-        {
+        IEnumerator AnimateDropdown(bool opening) {
             if (scrollRect == null || canvasGroup == null)
                 yield break;
 
@@ -555,57 +523,48 @@ namespace Evo.UI
             Vector3 targetScale = opening ? originalScrollScale : Vector3.zero;
 
             Vector2 startSize = scrollRT.sizeDelta;
-            Vector2 targetSize = opening ? new Vector2(scrollRT.sizeDelta.x, 
-                Mathf.Min(maxHeight, CalculateContentHeight())) : new Vector2(scrollRT.sizeDelta.x, 0f);
+            Vector2 targetSize = opening ? new Vector2(scrollRT.sizeDelta.x, Mathf.Min(maxHeight, CalculateContentHeight())) : new Vector2(scrollRT.sizeDelta.x, 0f);
 
             float startArrowRotation = headerArrow != null ? headerArrow.transform.localEulerAngles.z : 0f;
             float targetArrowRotation = opening && rotateArrow ? arrowRotation : 0f;
 
             // Set initial values for opening animations ONLY
-            if (opening)
-            {
-                if (animationType == AnimationType.Fade)
-                {
+            if (opening) {
+                if (animationType == AnimationType.Fade) {
                     canvasGroup.alpha = 0f;
                     scrollRT.localScale = originalScrollScale;
                     scrollRT.sizeDelta = targetSize;
                 }
-                else if (animationType == AnimationType.Scale)
-                {
+                else if (animationType == AnimationType.Scale) {
                     canvasGroup.alpha = 0f;
                     scrollRT.localScale = Vector3.zero;
                     scrollRT.sizeDelta = targetSize;
                 }
 
-                else if (animationType == AnimationType.Slide)
-                {
+                else if (animationType == AnimationType.Slide) {
                     canvasGroup.alpha = 0f;
                     scrollRT.localScale = originalScrollScale;
                     scrollRT.sizeDelta = new Vector2(scrollRT.sizeDelta.x, 0f);
                 }
             }
 
-            while (elapsed < animationDuration)
-            {
+            while (elapsed < animationDuration) {
                 elapsed += Time.unscaledDeltaTime;
                 float progress = animationCurve.Evaluate(elapsed / animationDuration);
 
                 // Apply animations based on type
                 if (animationType == AnimationType.Fade) { canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, progress); }
-                else if (animationType == AnimationType.Scale)
-                {
+                else if (animationType == AnimationType.Scale) {
                     canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, progress);
                     scrollRT.localScale = Vector3.Lerp(startScale, targetScale, progress);
                 }
-                else if (animationType == AnimationType.Slide)
-                {
+                else if (animationType == AnimationType.Slide) {
                     canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, progress);
                     scrollRT.sizeDelta = Vector2.Lerp(startSize, targetSize, progress);
                 }
 
                 // Rotate arrow
-                if (rotateArrow && headerArrow != null)
-                {
+                if (rotateArrow && headerArrow != null) {
                     float currentRotation = Mathf.LerpAngle(startArrowRotation, targetArrowRotation, progress);
                     headerArrow.transform.localRotation = Quaternion.Euler(0, 0, currentRotation);
                 }
@@ -631,27 +590,23 @@ namespace Evo.UI
             currentAnimation = null;
         }
 
-        IEnumerator SetScrollbarPositionDelayed()
-        {
+        IEnumerator SetScrollbarPositionDelayed() {
             yield return new WaitForEndOfFrame();
             Canvas.ForceUpdateCanvases();
             SetScrollbarPosition();
         }
 
-        public void Toggle()
-        {
+        public void Toggle() {
             if (dropdownState == DropdownState.Open) { Close(); }
             else { Open(); }
         }
 
-        public void Open()
-        {
+        public void Open() {
             if (dropdownState == DropdownState.Open)
                 return;
 
             // If currently animating, stop and immediately switch to opening
-            if (currentAnimation != null)
-            {
+            if (currentAnimation != null) {
                 StopCoroutine(currentAnimation);
                 currentAnimation = null;
             }
@@ -674,13 +629,11 @@ namespace Evo.UI
             currentAnimation = StartCoroutine(AnimateDropdown(true));
         }
 
-        public void Close()
-        {
+        public void Close() {
             if (dropdownState == DropdownState.Closed)
                 return;
 
-            if (currentAnimation != null)
-            {
+            if (currentAnimation != null) {
                 StopCoroutine(currentAnimation);
                 currentAnimation = null;
             }
@@ -694,14 +647,12 @@ namespace Evo.UI
             currentAnimation = StartCoroutine(AnimateDropdown(false));
         }
 
-        public void UpdateUI()
-        {
+        public void UpdateUI() {
             UpdateHeader();
             UpdateLayout();
         }
 
-        public void SelectItem(int index, bool triggerEvents = true)
-        {
+        public void SelectItem(int index, bool triggerEvents = true) {
             if (index < 0 || index >= items.Count)
                 return;
 
@@ -712,21 +663,19 @@ namespace Evo.UI
             UpdateHeader(selectedItem);
 
             if (triggerEvents) { onItemSelected?.Invoke(index); }
+
             if (closeOnItemSelect) { Close(); }
         }
 
-        public void SelectItem(Item item, bool triggerEvents = true)
-        {
+        public void SelectItem(Item item, bool triggerEvents = true) {
             int index = items.IndexOf(item);
+
             if (index >= 0) { SelectItem(index, triggerEvents); }
         }
 
-        public bool SelectItem(string label, bool triggerEvents = true)
-        {
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (items[i].label == label)
-                {
+        public bool SelectItem(string label, bool triggerEvents = true) {
+            for (int i = 0; i < items.Count; i++) {
+                if (items[i].label == label) {
                     SelectItem(i, triggerEvents);
                     return true;
                 }
@@ -735,50 +684,44 @@ namespace Evo.UI
             return false;
         }
 
-        public void AddItem(Item item, bool generate = true)
-        {
+        public void AddItem(Item item, bool generate = true, Action onClickAction = null) {
             items.Add(item);
 
-            if (generate && itemPrefab != null && itemParent != null)
-            {
+            if (generate && itemPrefab != null && itemParent != null) {
                 item.index = items.Count - 1;
 
                 GameObject itemGO = Instantiate(itemPrefab, itemParent);
                 itemGO.name = item.label;
                 Button btn = itemGO.GetComponent<Button>();
 
-                SetupItemButton(btn, item);
+                SetupItemButton(btn, item, onClickAction);
                 itemButtons.Add(btn);
             }
         }
 
-        public void AddItem(string label, Sprite icon = null, bool generate = true)
-        {
-            AddItem(new Item(label, icon), generate);
+        public void AddItem(string label, Sprite icon = null, bool generate = true, Action onClickAction = null) {
+            AddItem(new Item(label, icon), generate, onClickAction);
         }
 
-        public void AddItems(params Item[] newItems)
-        {
+        public void AddItems(Item[] newItems, List<Action> onClickActions = null) {
             items.AddRange(newItems);
-            GenerateItems();
+            GenerateItems(onClickActions);
         }
 
-        public void AddItems(params string[] labels)
-        {
+        public void AddItems(params string[] labels) {
             foreach (var label in labels) { items.Add(new Item(label)); }
-            GenerateItems();
+
+            GenerateItems(null);
         }
 
-        public void RemoveItem(int index)
-        {
-            if (index >= 0 && index < items.Count)
-            {
+        public void RemoveItem(int index) {
+            if (index >= 0 && index < items.Count) {
                 if (items[index].generatedButton != null) { Destroy(items[index].generatedButton); }
+
                 items.RemoveAt(index);
 
                 if (selectedIndex > index) { selectedIndex--; }
-                else if (selectedIndex == index)
-                {
+                else if (selectedIndex == index) {
                     selectedIndex = -1;
                     selectedItem = null;
                     UpdateHeader();
@@ -786,12 +729,9 @@ namespace Evo.UI
             }
         }
 
-        public bool RemoveItem(string label)
-        {
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (items[i].label == label)
-                {
+        public bool RemoveItem(string label) {
+            for (int i = 0; i < items.Count; i++) {
+                if (items[i].label == label) {
                     RemoveItem(i);
                     return true;
                 }
@@ -800,18 +740,15 @@ namespace Evo.UI
             return false;
         }
 
-        public void ClearAllItems()
-        {
+        public void ClearAllItems() {
             items.Clear();
             itemButtons.Clear();
 
             selectedIndex = -1;
             selectedItem = null;
 
-            if (itemParent != null && itemParent.childCount > 0)
-            {
-                for (int i = itemParent.childCount - 1; i >= 0; i--)
-                {
+            if (itemParent != null && itemParent.childCount > 0) {
+                for (int i = itemParent.childCount - 1; i >= 0; i--) {
                     Destroy(itemParent.GetChild(i).gameObject);
                 }
             }
@@ -819,14 +756,14 @@ namespace Evo.UI
             UpdateHeader();
         }
 
-        public void SortAlphabetically(bool ascending = true)
-        {
+        public void SortAlphabetically(bool ascending = true) {
             if (ascending) { items.Sort((a, b) => string.Compare(a.label, b.label, System.StringComparison.OrdinalIgnoreCase)); }
             else { items.Sort((a, b) => string.Compare(b.label, a.label, System.StringComparison.OrdinalIgnoreCase)); }
+
             for (int i = 0; i < items.Count; i++) { items[i].index = i; }
         }
 
-#if EVO_LOCALIZATION
+    #if EVO_LOCALIZATION
         void UpdateLocalization(Localization.LocalizationLanguage language = null)
         {
             foreach (Item item in items)
@@ -840,17 +777,16 @@ namespace Evo.UI
 
             UpdateHeader(selectedItem);
         }
-#endif
+    #endif
 
-#if UNITY_EDITOR
+    #if UNITY_EDITOR
         [HideInInspector] public bool itemsFoldout = true;
         [HideInInspector] public bool settingsFoldout = false;
         [HideInInspector] public bool navigationFoldout = false;
         [HideInInspector] public bool referencesFoldout = false;
         [HideInInspector] public bool eventsFoldout = false;
 
-        void OnValidate()
-        {
+        void OnValidate() {
             if (Application.isPlaying)
                 return;
 
@@ -859,30 +795,25 @@ namespace Evo.UI
             else { selectedIndex = 0; }
 
             // Use EditorApplication.delayCall to defer the update
-            UnityEditor.EditorApplication.delayCall += () =>
-            {
-                if (this != null)
-                {
+            UnityEditor.EditorApplication.delayCall += () => {
+                if (this != null) {
                     UpdateUI();
                 }
             };
         }
-#endif
+    #endif
     }
 
     // Helper component for scroll drag detection
-    public class DropdownScrollDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler
-    {
+    public class DropdownScrollDragHandler : MonoBehaviour, IBeginDragHandler, IEndDragHandler {
         public UnityEvent onBeginDrag = new();
         public UnityEvent onEndDrag = new();
 
-        public void OnBeginDrag(PointerEventData eventData)
-        {
+        public void OnBeginDrag(PointerEventData eventData) {
             onBeginDrag?.Invoke();
         }
 
-        public void OnEndDrag(PointerEventData eventData)
-        {
+        public void OnEndDrag(PointerEventData eventData) {
             onEndDrag?.Invoke();
         }
     }

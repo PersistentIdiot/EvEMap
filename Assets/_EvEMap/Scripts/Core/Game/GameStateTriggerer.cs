@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -37,7 +38,7 @@ namespace _EvEMap.Scripts.Core {
         }
 
         public void Trigger() {
-            Game.FireTrigger(trigger);
+            Game.FireTrigger(trigger).Forget();
         }
 
         public enum TriggerModes {
