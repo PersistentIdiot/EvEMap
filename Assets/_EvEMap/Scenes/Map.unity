@@ -14663,7 +14663,7 @@ MonoBehaviour:
   SystemPrefab: {fileID: 3358020166418241665, guid: 38c81b6fb305dca479021d435958877e,
     type: 3}
   data: {fileID: 11400000, guid: db4704d77f433614c87c32fb476ec565, type: 2}
-  SystemDistanceScaling: 100000000000000
+  SystemDistanceScaling: 1000000000000000
   SystemObjectScaling: 1
   systems:
     keyData: 
@@ -102783,7 +102783,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   fillRect: {fileID: 1130142707}
   valueText: {fileID: 1765205180}
-  labelText: {fileID: 0}
+  labelText: {fileID: 1106319772}
   onValueChanged:
     m_PersistentCalls:
       m_Calls: []

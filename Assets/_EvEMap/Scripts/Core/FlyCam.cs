@@ -6,6 +6,7 @@ public class FlyCam : MonoBehaviour {
     public float ZoomToPlanetSpeed = 2;
     public float ZoomToPlanetRotationSpeed = 1;
     public float moveSpeed = 5f;
+    public float boostMoveSpeedMultiplier = 3f;
     public float lookSensitivity = 2f;
     public float ZoomSensitivity = 0.1f;
     public float MinZoom = 0.1f;
@@ -26,7 +27,13 @@ public class FlyCam : MonoBehaviour {
         if (Input.GetKey(KeyCode.A)) moveDirection -= transform.right;
         if (Input.GetKey(KeyCode.E)) moveDirection += transform.up;
         if (Input.GetKey(KeyCode.Q)) moveDirection -= transform.up;
-        transform.position += moveDirection * moveSpeed * Time.deltaTime;
+
+        if (Input.GetKey(KeyCode.LeftShift)) {
+            transform.position += moveDirection * moveSpeed * Time.deltaTime*boostMoveSpeedMultiplier;
+        }
+        else {
+            transform.position += moveDirection * moveSpeed * Time.deltaTime;
+        }
         
         
         // Zooming in and out
