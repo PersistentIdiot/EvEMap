@@ -27,12 +27,11 @@ public class Map : Singleton<Map> {
 
     private async UniTask InitializeDisplay() {
         var progress = new Progress<(float value, string message)>();
-        //progress.ProgressChanged += (sender, tuple) => Debug.Log($"Value: {tuple.value}, Message: {tuple.message}");
-        progress.ProgressChanged += (sender, tuple) => {
+        progress.ProgressChanged += (_, tuple) => {
+            UIManager.Instance.ProgressBar.gameObject.SetActive(true);
             UIManager.Instance.ProgressBar.Value = tuple.value;
             UIManager.Instance.ProgressBar.labelText.text = tuple.message;
         };
-
         await Data.InitializeMapData(new HttpClient());
         //await DisplaySystems(Data.SystemInfos);
         await DisplaySystemsAsync(progress);
@@ -59,29 +58,44 @@ public class Map : Singleton<Map> {
     }
 
     private async UniTask<bool> DisplaySystemsAsync(IProgress<(float progress, string message)> progress) {
+        // Grab only non-null K-Space systems
+        var systemsToDisplay = Data.SystemInfos.Values
+            .Where(s => s != null && s.system_id < 30999999)
+            .ToList();
+
+        // Init variables for progress bar
+        int total = systemsToDisplay.Count;
         int systemsDisplayed = 0;
-        foreach (SystemInfo systemInfo in from kvp in Data.SystemInfos
-            select kvp.Value
-            into systemInfo
-            where systemInfo != null
-            where systemInfo.system_id < 30999999
-            select systemInfo) {
-            progress.Report(((float)systemsDisplayed/data.SystemInfos.Count, $"Loading {systemInfo.name}"));
-            
+
+
+       await  UniTask.WaitForSeconds(1f);
+
+        foreach (var systemInfo in systemsToDisplay) {
+            await UniTask.NextFrame();
             var system = Instantiate(SystemPrefab, transform);
+            
+            // Give UISystem its SystemInfo
             system.Init(systemInfo);
+            
+            // Update position and scale
             system.transform.position = new Vector3(
                 (float)(systemInfo.position.x / SystemDistanceScaling),
                 (float)(systemInfo.position.y / SystemDistanceScaling),
                 (float)(systemInfo.position.z / SystemDistanceScaling));
             system.transform.localScale = Vector3.one * SystemObjectScaling;
+            
+            // Add system to dictionary for later use
             systems.Add(systemInfo.system_id, system);
             
-            
+            var t = (float)systemsDisplayed/total;
+            Debug.Log($"{systemsDisplayed}/{total}, {t*100:F0}%");
             systemsDisplayed++;
-            await UniTask.Yield();
+            await UniTask.NextFrame();
+            
+            // Update progress bar via callback
+            progress.Report(((float)systemsDisplayed/total, $"Loading {systemInfo.name}"));
         }
-
+        UIManager.Instance.ProgressBar.gameObject.SetActive(false);
         return true;
     }
 

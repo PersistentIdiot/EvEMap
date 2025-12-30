@@ -14643,7 +14643,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -14664,7 +14664,7 @@ MonoBehaviour:
     type: 3}
   data: {fileID: 11400000, guid: db4704d77f433614c87c32fb476ec565, type: 2}
   SystemDistanceScaling: 1000000000000000
-  SystemObjectScaling: 1
+  SystemObjectScaling: 3
   systems:
     keyData: 
     valueData: []
@@ -20197,8 +20197,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -20264,6 +20264,7 @@ MonoBehaviour:
   ZoomToPlanetSpeed: 2
   ZoomToPlanetRotationSpeed: 1
   moveSpeed: 5
+  boostMoveSpeedMultiplier: 3
   lookSensitivity: 2
   ZoomSensitivity: 0.1
   MinZoom: 0.1
@@ -73114,7 +73115,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Getting system information (J165920)
+  m_text: Loading GL6S-2
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6bdb9c1d8b3ace1408d2de12e30ae744, type: 2}
   m_sharedMaterial: {fileID: -8965312031696399558, guid: 6bdb9c1d8b3ace1408d2de12e30ae744,
@@ -75592,7 +75593,7 @@ RectTransform:
   m_Father: {fileID: 1256587162}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0.8196799, y: 1}
+  m_AnchorMax: {x: 0.20622353, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -102747,7 +102748,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a9f66bd5fa24af44e93d048b661c10fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  value: 0.8196799
+  value: 0.20622353
   minValue: 0
   maxValue: 1
   invokeAtStart: 0
@@ -115151,7 +115152,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 82.0%
+  m_text: 20.6%
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6bdb9c1d8b3ace1408d2de12e30ae744, type: 2}
   m_sharedMaterial: {fileID: -8965312031696399558, guid: 6bdb9c1d8b3ace1408d2de12e30ae744,
