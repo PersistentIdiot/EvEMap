@@ -38,7 +38,7 @@ public class FlyCam : MonoBehaviour {
         // Zooming in and out
         if (Input.mouseScrollDelta.y >= 0.1f) {
             desiredZoomLevel = Mathf.Clamp(desiredZoomLevel + Input.mouseScrollDelta.y * ZoomSensitivity, MinZoom, MaxZoom);
-            // Map.Instance.SetZoomAmount(desiredZoomLevel);
+            //Map.Instance.SetZoomAmount(desiredZoomLevel);
         }
 
         // Zooming toward planet

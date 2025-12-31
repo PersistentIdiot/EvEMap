@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -16,12 +17,11 @@ using SystemInfo = _ProjectEvE.Scripts.Data.SystemInfo;
 
 
 public class Map : Singleton<Map> {
-    public int MapDebugMode = 1;
-    [SerializeField, BoxGroup("References")] private UISystem SystemPrefab;
     public static MapData Data { get => Instance.data; }
     [SerializeField, BoxGroup("References")] private MapData data;
-
+    [SerializeField, BoxGroup("References")] private UISystem SystemPrefab;
     [BoxGroup("Settings")] public float SystemObjectScaling = 0.125f;
+    [BoxGroup("Settings")] public float LineThickness = 3f;
     [BoxGroup("Settings")] public float MinZoomAmount = 0.1f;
     [BoxGroup("Settings")] public float MaxZoomAmount = 100f;
 
@@ -30,8 +30,9 @@ public class Map : Singleton<Map> {
     [SerializeField, BoxGroup("Debug")] private MapModes MapMode;
 
     // Start is called before the first frame update
-    void Start() {
+    IEnumerator Start() {
         DOTween.SetTweensCapacity(10000, 100);
+        yield return new WaitForEndOfFrame();
         InitializeDisplay().Forget();
     }
 
@@ -39,9 +40,9 @@ public class Map : Singleton<Map> {
         if (selectedSystem == null || !Data.StargateInfos.TryGetValue(selectedSystem.SystemInfo.system_id, out List<StargateInfo> stargateInfos)) return;
 
         foreach (var stargateInfo in stargateInfos) {
-            if(!systems.TryGetValue(stargateInfo.system_id,out UISystem startSystem)) continue;
+            if (!systems.TryGetValue(stargateInfo.system_id, out UISystem startSystem)) continue;
             if (!systems.TryGetValue(stargateInfo.destination.system_id, out UISystem destinationSystem)) continue;
-            
+
             var startPosition = startSystem.transform.position;
             var endPosition = destinationSystem.transform.position;
 
@@ -50,14 +51,15 @@ public class Map : Singleton<Map> {
                 // set up static parameters. these are used for all following Draw.Line calls
                 Draw.LineGeometry = LineGeometry.Volumetric3D;
                 Draw.ThicknessSpace = ThicknessSpace.Pixels;
-                Draw.Thickness = 4; // 4px wide
-
+                Draw.Thickness = LineThickness;
                 Draw.ResetMatrix();
 
                 // draw line
                 Draw.Line(startPosition, endPosition, Color.green);
             }
         }
+
+
     }
 
     public void SwitchTo2DMode() {
@@ -86,6 +88,8 @@ public class Map : Singleton<Map> {
         Debug.Log("Zooming!");
         amount = Mathf.Clamp(amount, MinZoomAmount, MaxZoomAmount);
 
+        transform.DOScale(Vector3.one * amount, 1f);
+        /*
         foreach (var kvp in systems) {
             var system = kvp.Value;
             var systemInfo = system.SystemInfo;
@@ -98,6 +102,7 @@ public class Map : Singleton<Map> {
             DOTween.Kill(system.transform);
             system.transform.DOMove(endPosition, 0.25f, true);
         }
+        */
     }
 
     private async UniTask InitializeDisplay() {
@@ -120,13 +125,13 @@ public class Map : Singleton<Map> {
         // Init variables for progress bar
         int total = systemsToDisplay.Count;
         int systemsDisplayed = 0;
-
+        int systemsDisplayedThisBatch = 0;
 
         await UniTask.WaitForSeconds(1f);
 
         foreach (var systemInfo in systemsToDisplay) {
             var system = Instantiate(SystemPrefab, transform);
-            await UniTask.NextFrame();
+
             // Give UISystem its SystemInfo
             system.Init(systemInfo);
 
@@ -145,6 +150,14 @@ public class Map : Singleton<Map> {
 
             // Update progress bar via callback
             progress.Report(((float)systemsDisplayed / total, $"Loading {systemInfo.name}"));
+            
+            // Smooth out the spawning a bit
+            systemsDisplayedThisBatch++;
+
+            if (systemsDisplayedThisBatch > 20) {
+                systemsDisplayedThisBatch = 0;
+                await UniTask.NextFrame();
+            }
         }
 
         progress.Report((1f, "Finished loading systems"));
