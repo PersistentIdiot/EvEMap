@@ -8,24 +8,30 @@ using _ProjectEvE.Scripts.Data;
 using _ProjectEvE.Scripts.Utilities;
 using _ProjectEvE.Scripts.UX;
 using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using Shapes;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using SystemInfo = _ProjectEvE.Scripts.Data.SystemInfo;
 
+
 public class Map : Singleton<Map> {
+    public int MapDebugMode = 1;
     [SerializeField, BoxGroup("References")] private UISystem SystemPrefab;
     public static MapData Data { get => Instance.data; }
     [SerializeField, BoxGroup("References")] private MapData data;
 
-    [BoxGroup("Settings")] public double SystemDistanceScaling = 1000000;
     [BoxGroup("Settings")] public float SystemObjectScaling = 0.125f;
+    [BoxGroup("Settings")] public float MinZoomAmount = 0.1f;
+    [BoxGroup("Settings")] public float MaxZoomAmount = 100f;
 
     [SerializeField, BoxGroup("Debug")] private UISystemDictionary systems = new();
     [SerializeField, BoxGroup("Debug")] private UISystem selectedSystem;
+    [SerializeField, BoxGroup("Debug")] private MapModes MapMode;
 
     // Start is called before the first frame update
     void Start() {
+        DOTween.SetTweensCapacity(10000, 100);
         InitializeDisplay().Forget();
     }
 
@@ -33,6 +39,7 @@ public class Map : Singleton<Map> {
         if (selectedSystem == null || !Data.StargateInfos.TryGetValue(selectedSystem.SystemInfo.system_id, out List<StargateInfo> stargateInfos)) return;
 
         foreach (var stargateInfo in stargateInfos) {
+            /*
             if (!Data.SystemInfos.TryGetValue(stargateInfo.system_id, out SystemInfo startSystem)) {
                 Debug.Log($"Failed to get {stargateInfo.system_id} from SystemInfos! ToDo: Pull it here");
                 continue;
@@ -42,11 +49,12 @@ public class Map : Singleton<Map> {
                 Debug.Log($"Failed to get {stargateInfo.destination.system_id} from SystemInfos! ToDo: Pull it here");
                 continue;
             }
-
-            var offset = Get3DVectorFromPosition(startSystem.position);
-            //offset = Vector3.zero;
-            var startPosition = Get3DVectorFromPosition(startSystem.position);
-            var endPosition = Get3DVectorFromPosition(destinationSystem.position);
+            */
+            if(!systems.TryGetValue(stargateInfo.system_id,out UISystem startSystem)) continue;
+            if (!systems.TryGetValue(stargateInfo.destination.system_id, out UISystem destinationSystem)) continue;
+            
+            var startPosition = startSystem.transform.position;
+            var endPosition = destinationSystem.transform.position;
 
 
             using (Draw.Command(Camera.main)) {
@@ -55,8 +63,7 @@ public class Map : Singleton<Map> {
                 Draw.ThicknessSpace = ThicknessSpace.Pixels;
                 Draw.Thickness = 4; // 4px wide
 
-                // set static parameter to draw in the local space of this object
-                Draw.Matrix = transform.localToWorldMatrix;
+                Draw.ResetMatrix();
 
                 // draw line
                 Draw.Line(startPosition, endPosition, Color.green);
@@ -66,10 +73,42 @@ public class Map : Singleton<Map> {
 
     public void SwitchTo2DMode() {
         Debug.Log($"Switching to 2D Mode");
+
+        foreach (var kvp in systems) {
+            var system = kvp.Value;
+            var systemInfo = system.SystemInfo;
+            DOTween.Kill(system.transform);
+            system.transform.DOMove(Get2DVectorFromPosition(systemInfo.position), 1, true);
+        }
     }
 
     public void SwitchTo3DMode() {
         Debug.Log($"Switching to 3D Mode");
+
+        foreach (var kvp in systems) {
+            var system = kvp.Value;
+            var systemInfo = system.SystemInfo;
+            DOTween.Kill(system.transform);
+            system.transform.DOMove(Get3DVectorFromPosition(systemInfo.position), 1, true);
+        }
+    }
+
+    public void SetZoomAmount(float amount) {
+        Debug.Log("Zooming!");
+        amount = Mathf.Clamp(amount, MinZoomAmount, MaxZoomAmount);
+
+        foreach (var kvp in systems) {
+            var system = kvp.Value;
+            var systemInfo = system.SystemInfo;
+            var endPosition = MapMode switch {
+                MapModes.TwoDimensions => Get2DVectorFromPosition(systemInfo.position) * amount,
+                MapModes.ThreeDimensions => Get3DVectorFromPosition(systemInfo.position) * amount,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            DOTween.Kill(system.transform);
+            system.transform.DOMove(endPosition, 0.25f, true);
+        }
     }
 
     private async UniTask InitializeDisplay() {
@@ -78,10 +117,9 @@ public class Map : Singleton<Map> {
             UIManager.Instance.ProgressBar.gameObject.SetActive(true);
             UIManager.Instance.ProgressBar.Value = tuple.value;
             UIManager.Instance.ProgressBar.labelText.text = tuple.message;
-            if (Math.Abs(tuple.value - 1f) < Single.MinValue) UIManager.Instance.ProgressBar.gameObject.SetActive(false);
+            if (tuple.value == 1f) UIManager.Instance.ProgressBar.gameObject.SetActive(false);
         };
         await Data.InitializeMapData(progress, new HttpClient());
-        //await DisplaySystems(Data.SystemInfos);
         await DisplaySystemsAsync(progress);
     }
 
@@ -132,12 +170,18 @@ public class Map : Singleton<Map> {
 
     public static Vector3 Get3DVectorFromPosition(Position position) {
         return new Vector3(
-            (float)(position.x / Instance.SystemDistanceScaling),
-            (float)(-position.z / Instance.SystemDistanceScaling),
-            (float)(position.y / Instance.SystemDistanceScaling));
+            (float)(position.x / Constants.DefaultSystemScaling),
+            (float)(-position.z / Constants.DefaultSystemScaling),
+            (float)(position.y / Constants.DefaultSystemScaling));
     }
 
     public static Vector3 Get2DVectorFromPosition(Position position) {
-        return new Vector3((float)(position.x / Instance.SystemDistanceScaling), (float)(-position.z / Instance.SystemDistanceScaling), 0);
+        return new Vector3((float)(position.x / Constants.DefaultSystemScaling), (float)(-position.z / Constants.DefaultSystemScaling), 0);
+    }
+
+
+    private enum MapModes {
+        TwoDimensions,
+        ThreeDimensions
     }
 }

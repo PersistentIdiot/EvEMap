@@ -13,7 +13,8 @@ namespace _EvEMap.Scripts.Core {
         public const string RegionIDsKey = "RegionIDs";
         public const string ConstellationIDsKey = "ConstellationIDs";
         public const string SystemIDsKey = "SystemIDs";
-        
+
+        public static double DefaultSystemScaling = 1E+15;
         
         public const string RegionInfosKey = "RegionInfos";
         public const string ConstellationInfosKey = "ConstellationInfos";

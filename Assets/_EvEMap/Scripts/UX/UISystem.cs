@@ -27,10 +27,16 @@ namespace _ProjectEvE.Scripts.UX {
 
         private void OnMouseDown() {
             if (Time.time - lastClickTime <= DoubleClickDelay) {
+                Debug.Log($"Double clicked!");
+                
                 if (Camera.main!.TryGetComponent(out FlyCam flyCam)) {
                     flyCam.ZoomToSystem(this);
                 }
             }
+            else {
+                Debug.Log($"Clicked");
+            }
+
 
             lastClickTime = Time.time;
             Map.Instance.SelectSystem(this).Forget();

@@ -230,6 +230,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e14a176c71b4eedbfb4e7e565c32d7d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  DoubleClickDelay: 0.5
   SystemInfo:
     constellation_id: 0
     name: 

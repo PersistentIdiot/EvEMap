@@ -12,12 +12,12 @@ public class FlyCam : MonoBehaviour {
     public float MinZoom = 0.1f;
     public float MaxZoom = 50f;
     [SerializeField] private UISystem targetSystem = null;
-    
+
     private float rotationX = 0f;
     private float rotationY = 0f;
     private float desiredZoomLevel = 1;
-    
-    
+
+
     void Update() {
         // Movement
         Vector3 moveDirection = Vector3.zero;
@@ -29,27 +29,29 @@ public class FlyCam : MonoBehaviour {
         if (Input.GetKey(KeyCode.Q)) moveDirection -= transform.up;
 
         if (Input.GetKey(KeyCode.LeftShift)) {
-            transform.position += moveDirection * moveSpeed * Time.deltaTime*boostMoveSpeedMultiplier;
+            transform.position += moveDirection * moveSpeed * Time.deltaTime * boostMoveSpeedMultiplier;
         }
         else {
             transform.position += moveDirection * moveSpeed * Time.deltaTime;
         }
-        
-        
+
         // Zooming in and out
-        desiredZoomLevel = Mathf.Clamp(desiredZoomLevel + Input.mouseScrollDelta.y, MinZoom, MaxZoom);
-        Map.Instance.transform.localScale = Vector3.one* desiredZoomLevel;
-        
+        if (Input.mouseScrollDelta.y >= 0.1f) {
+            desiredZoomLevel = Mathf.Clamp(desiredZoomLevel + Input.mouseScrollDelta.y * ZoomSensitivity, MinZoom, MaxZoom);
+            // Map.Instance.SetZoomAmount(desiredZoomLevel);
+        }
+
         // Zooming toward planet
         if (targetSystem != null) {
             float distanceToTarget = Vector3.Distance(transform.position, targetSystem.transform.position);
-            
+
             // Move toward target
-            transform.position = Vector3.Lerp(transform.position, targetSystem.transform.position, Time.deltaTime*ZoomToPlanetSpeed);
+            transform.position = Vector3.Lerp(transform.position, targetSystem.transform.position, Time.deltaTime * ZoomToPlanetSpeed);
 
             // Face target
             var targetRotation = Quaternion.LookRotation(targetSystem.transform.position - transform.position);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * ZoomToPlanetRotationSpeed);
+
             if (distanceToTarget <= ZoomToPlanetDistance) {
                 targetSystem = null;
             }
