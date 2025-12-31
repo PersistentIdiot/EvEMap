@@ -35,12 +35,12 @@ namespace _ProjectEvE.Scripts.Data {
         [SerializeField] private List<long> constellationIDs;
         public List<long> RegionIDs;
         public List<long> SystemIDs;
-        public Dictionary<long, ConstellationInfo> ConstellationInfos = new();
-        public Dictionary<long, RegionInfo> RegionInfos = new();
-        public Dictionary<long, SystemInfo> SystemInfos = new();
+        [HideInInspector] public Dictionary<long, ConstellationInfo> ConstellationInfos = new();
+        [HideInInspector] public Dictionary<long, RegionInfo> RegionInfos = new();
+        [HideInInspector] public Dictionary<long, SystemInfo> SystemInfos = new();
+        [HideInInspector] public Dictionary<long, List<StargateInfo>> StargateInfos = new();
 
-
-        public async UniTask InitializeMapData(HttpClient client = null) {
+        public async UniTask InitializeMapData(Progress<(float value, string message)> progress, HttpClient client = null) {
             client ??= new HttpClient();
 
             // Constellation IDs
@@ -119,6 +119,19 @@ namespace _ProjectEvE.Scripts.Data {
                     Debug.Log($"Pulling System Infos from EvE");
                     SystemInfos = await GetKspaceInfos(SystemIDs, client);
                     ES3.Save(Constants.SystemInfosKey, SystemInfos, Constants.SaveFileName);
+                }
+            }
+            
+            // Stargate Infos
+            if (StargateInfos == null ||StargateInfos.Count < Constants.StargatesCount) {
+                if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.StargateInfosKey)) {
+                    Debug.Log($"Loading Stargate Infos from file");
+                    StargateInfos = ES3.Load<Dictionary<long, List<StargateInfo>>>(Constants.StargateInfosKey, Constants.SaveFileName);
+                }
+                else {
+                    Debug.Log($"Pulling Stargate Infos from EvE");
+                    StargateInfos = await GetStargateInfosAsync(progress, SystemIDs, client);
+                    ES3.Save(Constants.StargateInfosKey, StargateInfos, Constants.SaveFileName);
                 }
             }
         }
@@ -226,8 +239,8 @@ namespace _ProjectEvE.Scripts.Data {
             if (RegionInfos.TryGetValue(regionID, out RegionInfo regionInfo)) {
                 return regionInfo;
             }
-            
-            
+
+
             client ??= new HttpClient();
             var request = new HttpRequestMessage {
                 Method = HttpMethod.Get,
@@ -300,18 +313,42 @@ namespace _ProjectEvE.Scripts.Data {
             return returnValue;
         }
 
-        public async UniTask<List<StargateInfo>> GetStargateInfos(SystemInfo systemInfo) {
-            Debug.Assert(systemInfo!=null);
-            UIManager.Instance.SetProgressBarVisibility(true);
+        public async UniTask<Dictionary<long, List<StargateInfo>>> GetStargateInfosAsync(IProgress<(float progress, string message)> progress,
+                                                                                         List<long> systemIDs,
+                                                                                         HttpClient client = null) {
+            Dictionary<long, List<StargateInfo>> returnValue = new();
+            client ??= new HttpClient();
+
+            await UniTask.WaitForSeconds(1f);
+
+            for (int index = 0; index < systemIDs.Count; index++) {
+                long systemID = systemIDs[index];
+                
+                if (SystemInfos.TryGetValue(systemID, out SystemInfo systemInfo)) {
+                    var stargateInfos = await GetStargateInfosForSystem(systemInfo, client);
+                    progress.Report(((float)index / systemIDs.Count, $"Getting Stargate info for {systemInfo.name}"));
+                    returnValue.Add(systemID, stargateInfos);
+                }
+                else {
+                    progress.Report(((float)index / systemIDs.Count, $"Skipping SystemID ({systemID}) as it is not present in dictionary. ToDo: Populate it here."));
+                    continue;
+                }
+            }
+
+            return returnValue;
+        }
+
+        public async UniTask<List<StargateInfo>> GetStargateInfosForSystem(SystemInfo systemInfo, HttpClient client = null) {
+            Debug.Assert(systemInfo != null);
             List<StargateInfo> returnValue = new();
-            var client = new HttpClient();
+            client ??= new HttpClient();
 
             if (systemInfo.stargates == null) {
                 systemInfo.stargates = Array.Empty<long>();
             }
+
             // Send stargate info requests
             for (int index = 0; index < systemInfo.stargates.Length; index++) {
-                UIManager.Instance.ProgressBar.Value = (float)index / systemInfo.stargates.Length;
                 long ID = systemInfo.stargates[index];
                 var request = new HttpRequestMessage {
                     Method = HttpMethod.Get,
@@ -337,9 +374,7 @@ namespace _ProjectEvE.Scripts.Data {
                     StargateInfo stargateInfo = JsonUtility.FromJson<StargateInfo>(body);
 
                     if (stargateInfo != null) {
-                        UIManager.Instance.ProgressBarLabel.text = $"Getting stargate info for ({systemInfo.name})";
                         returnValue.Add(stargateInfo);
-                        //SystemInfos.Add(systemInfo);
                     }
                     else {
                         Debug.Log($"Failed to parse");

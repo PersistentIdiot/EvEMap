@@ -18,10 +18,11 @@ namespace _EvEMap.Scripts.Core {
         public const string RegionInfosKey = "RegionInfos";
         public const string ConstellationInfosKey = "ConstellationInfos";
         public const string SystemInfosKey = "SystemInfos";
+        public const string StargateInfosKey = "StargateInfos";
 
         public const int ConstellationCount = 1173;
         public const int RegionCount = 111;
         public const int SystemCount = 8435;
-        
+        public const int StargatesCount = 10;
     }
 }

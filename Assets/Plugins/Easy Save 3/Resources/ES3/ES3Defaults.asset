@@ -38,9 +38,13 @@ MonoBehaviour:
     - Assembly-CSharp
     - Assembly-CSharp-firstpass
     - Bewildered.SmartLibrary.Runtime
+    - DOTween.Modules
+    - DOTweenPro.Scripts
     - Evo
     - Evo.UI
     - Linework
+    - ShapesRuntime
+    - ShapesSamples
     - UniTask
     - UniTask.Addressables
     - UniTask.DOTween

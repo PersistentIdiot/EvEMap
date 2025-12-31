@@ -16,7 +16,7 @@ namespace _ProjectEvE.Scripts.UX {
 
         public async UniTask SetSystemInfo(SystemInfo info) {
             systemInfo = info;
-            var stargateInfos = await Map.Data.GetStargateInfos(systemInfo);
+            var stargateInfos = await Map.Data.GetStargateInfosForSystem(systemInfo);
             TitleText.text = $"{systemInfo.name} <color=#{ColorUtility.ToHtmlStringRGB(UISystem.GetColorFromSecurityStatus(systemInfo.security_status))}>({systemInfo.security_status:N1}</color>)";
             DescriptionText.text = "";
             foreach (var stargateInfo in stargateInfos) {
@@ -31,6 +31,7 @@ namespace _ProjectEvE.Scripts.UX {
 
         private void Update() {
             transform.LookAt(Camera.main!.transform);
+            transform.up = Camera.main.transform.up;
             transform.Rotate(0,180,0);
         }
     }

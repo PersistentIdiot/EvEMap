@@ -12,7 +12,6 @@ namespace _ProjectEvE.Scripts.UX {
         public SystemInfo SystemInfo;
 
         [SerializeField] private WideOutlineSettings wideOutlineSettings;
-        [FormerlySerializedAs("model")]
         [SerializeField] private Renderer outline;
         [SerializeField] private Renderer model;
         [SerializeField] private bool selected = false;
@@ -23,30 +22,18 @@ namespace _ProjectEvE.Scripts.UX {
 
             SystemInfo = systemInfo;
             gameObject.name = $"System ({systemInfo.name})";
-
-
             model.material.color = GetColorFromSecurityStatus(systemInfo.security_status);
         }
 
         private void OnMouseDown() {
             if (Time.time - lastClickTime <= DoubleClickDelay) {
-                Debug.Log($"Double clicked!");
-                
                 if (Camera.main!.TryGetComponent(out FlyCam flyCam)) {
                     flyCam.ZoomToSystem(this);
                 }
             }
-            else {
-                Debug.Log($"Clicked");
-            }
-
 
             lastClickTime = Time.time;
             Map.Instance.SelectSystem(this).Forget();
-        }
-
-        private void OnMouseUp() {
-            // SetSelected(false);
         }
 
         public void SetSelected(bool value) {
@@ -64,7 +51,7 @@ namespace _ProjectEvE.Scripts.UX {
                 outline.gameObject.SetActive(false);
             }
         }
-        
+
         public static Color GetColorFromSecurityStatus(float securityStatus) {
             if (securityStatus < 0) {
                 return new Color(Math.Abs(securityStatus), 0, 0);
