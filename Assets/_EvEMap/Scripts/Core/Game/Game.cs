@@ -9,8 +9,8 @@ using UnityEngine;
 namespace _EvEMap.Scripts.Core {
     public partial class Game: _ProjectEvE.Scripts.Utilities.Singleton<Game> {
         public GameStates InitialState = GameStates.Initial;
-        [SerializeField] private SceneField MenuScene;
-        [SerializeField] private SceneField MapScene;
+        [SerializeField] private string MenuSceneName;
+        [SerializeField] private string MapSceneName;
         [SerializeField] private LSS_Manager LoadingManager;
         private StateMachine<GameStates, GameTriggers> stateMachine;
 

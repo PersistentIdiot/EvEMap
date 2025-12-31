@@ -522,16 +522,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   InitialState: 0
-  MenuScene:
-    _sceneOB: {fileID: 102900000, guid: f42f9c9bb59274541b6718fc33e037b4, type: 3}
-    _name: Menu
-    _path: Assets/_EvEMap/Scenes/Menu.unity
-    _buildIndex: 1
-  MapScene:
-    _sceneOB: {fileID: 102900000, guid: 5589af3d604fd624cb136e8220c6a13f, type: 3}
-    _name: Map
-    _path: Assets/_EvEMap/Scenes/Map.unity
-    _buildIndex: 2
+  MenuSceneName: Menu
+  MapSceneName: Map
   LoadingManager: {fileID: 535289082}
   CurrentState: 0
 --- !u!4 &990411407

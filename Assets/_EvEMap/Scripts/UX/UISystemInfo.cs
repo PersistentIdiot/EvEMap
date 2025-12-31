@@ -31,7 +31,6 @@ namespace _ProjectEvE.Scripts.UX {
 
         private void Update() {
             transform.LookAt(Camera.main!.transform);
-            transform.up = Camera.main.transform.up;
             transform.Rotate(0,180,0);
         }
     }

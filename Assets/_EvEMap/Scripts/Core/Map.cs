@@ -39,17 +39,6 @@ public class Map : Singleton<Map> {
         if (selectedSystem == null || !Data.StargateInfos.TryGetValue(selectedSystem.SystemInfo.system_id, out List<StargateInfo> stargateInfos)) return;
 
         foreach (var stargateInfo in stargateInfos) {
-            /*
-            if (!Data.SystemInfos.TryGetValue(stargateInfo.system_id, out SystemInfo startSystem)) {
-                Debug.Log($"Failed to get {stargateInfo.system_id} from SystemInfos! ToDo: Pull it here");
-                continue;
-            }
-
-            if (!Data.SystemInfos.TryGetValue(stargateInfo.destination.system_id, out SystemInfo destinationSystem)) {
-                Debug.Log($"Failed to get {stargateInfo.destination.system_id} from SystemInfos! ToDo: Pull it here");
-                continue;
-            }
-            */
             if(!systems.TryGetValue(stargateInfo.system_id,out UISystem startSystem)) continue;
             if (!systems.TryGetValue(stargateInfo.destination.system_id, out UISystem destinationSystem)) continue;
             
@@ -142,7 +131,12 @@ public class Map : Singleton<Map> {
             system.Init(systemInfo);
 
             // Update position and scale
-            system.transform.position = Get3DVectorFromPosition(systemInfo.position);
+            var systemPosition = MapMode switch {
+                MapModes.TwoDimensions => Get2DVectorFromPosition(systemInfo.position),
+                MapModes.ThreeDimensions => Get3DVectorFromPosition(systemInfo.position),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+            system.transform.position = systemPosition;
             system.transform.localScale = Vector3.one * SystemObjectScaling;
 
             // Add system to dictionary for later use
