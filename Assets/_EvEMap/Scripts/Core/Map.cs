@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using _EvEMap.Scripts.Core;
 using _ProjectEvE.Scripts.Data;
 using _ProjectEvE.Scripts.Utilities;
@@ -13,57 +12,116 @@ using DG.Tweening;
 using Shapes;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using SystemInfo = _ProjectEvE.Scripts.Data.SystemInfo;
+using UnityEngine.Rendering;
 
 
 public class Map : Singleton<Map> {
     public static MapData Data { get => Instance.data; }
+    public bool DrawAllStargateConnections = false;
     [SerializeField, BoxGroup("References")] private MapData data;
     [SerializeField, BoxGroup("References")] private UISystem SystemPrefab;
     [BoxGroup("Settings")] public float SystemObjectScaling = 0.125f;
     [BoxGroup("Settings")] public float LineThickness = 3f;
     [BoxGroup("Settings")] public float MinZoomAmount = 0.1f;
     [BoxGroup("Settings")] public float MaxZoomAmount = 100f;
+    [BoxGroup("Settings")] public int SystemSpawnBatchCount = 20;
 
     [SerializeField, BoxGroup("Debug")] private UISystemDictionary systems = new();
     [SerializeField, BoxGroup("Debug")] private UISystem selectedSystem;
     [SerializeField, BoxGroup("Debug")] private MapModes MapMode;
 
-    // Start is called before the first frame update
     IEnumerator Start() {
         DOTween.SetTweensCapacity(10000, 100);
         yield return new WaitForEndOfFrame();
         InitializeDisplay().Forget();
+        RenderPipelineManager.endCameraRendering += OnEndCameraRender;
+    }
+
+    private void OnDestroy() {
+        RenderPipelineManager.endCameraRendering -= OnEndCameraRender;
     }
 
     private void Update() {
-        if (selectedSystem == null || !Data.StargateInfos.TryGetValue(selectedSystem.SystemInfo.system_id, out List<StargateInfo> stargateInfos)) return;
+        if (selectedSystem != null && Data.StargateInfos.TryGetValue(selectedSystem.SystemInfo.system_id, out List<StargateInfo> stargateInfos)) {
+            DrawSelectedSystemStargateConnections();
+        }
 
-        foreach (var stargateInfo in stargateInfos) {
-            if (!systems.TryGetValue(stargateInfo.system_id, out UISystem startSystem)) continue;
-            if (!systems.TryGetValue(stargateInfo.destination.system_id, out UISystem destinationSystem)) continue;
-
-            var startPosition = startSystem.transform.position;
-            var endPosition = destinationSystem.transform.position;
+        if (this.DrawAllStargateConnections) DrawAllStargateConnections();
 
 
+        void DrawSelectedSystemStargateConnections() {
+            foreach (var stargateInfo in stargateInfos) {
+                if (!systems.TryGetValue(stargateInfo.system_id, out UISystem startSystem)) continue;
+                if (!systems.TryGetValue(stargateInfo.destination.system_id, out UISystem destinationSystem)) continue;
+
+                var startPosition = startSystem.transform.position;
+                var endPosition = destinationSystem.transform.position;
+
+
+                using (Draw.Command(Camera.main)) {
+                    // set up static parameters. these are used for all following Draw.Line calls
+                    Draw.LineGeometry = LineGeometry.Volumetric3D;
+                    Draw.ThicknessSpace = ThicknessSpace.Pixels;
+                    Draw.Thickness = LineThickness;
+                    Draw.ResetMatrix();
+
+                    // draw line
+                    Draw.Line(startPosition, endPosition, Color.blue);
+                }
+            }
+
+        }
+
+        void DrawAllStargateConnections() {
             using (Draw.Command(Camera.main)) {
-                // set up static parameters. these are used for all following Draw.Line calls
-                Draw.LineGeometry = LineGeometry.Volumetric3D;
-                Draw.ThicknessSpace = ThicknessSpace.Pixels;
-                Draw.Thickness = LineThickness;
-                Draw.ResetMatrix();
+                foreach (var kvp in Data.StargateInfos) {
+                    foreach (var stargateInfo in kvp.Value) {
+                        if (!systems.TryGetValue(stargateInfo.system_id, out UISystem startSystem)) continue;
+                        if (!systems.TryGetValue(stargateInfo.destination.system_id, out UISystem destinationSystem)) continue;
 
-                // draw line
-                Draw.Line(startPosition, endPosition, Color.green);
+                        var startPosition = startSystem.transform.position;
+                        var endPosition = destinationSystem.transform.position;
+
+                        Draw.LineGeometry = LineGeometry.Volumetric3D;
+                        Draw.ThicknessSpace = ThicknessSpace.Pixels;
+                        Draw.Thickness = LineThickness / 2;
+
+
+                        // draw line
+                        Draw.Line(startPosition, endPosition, Color.green);
+                    }
+                }
+
+                Draw.ResetMatrix();
+            }
+        }
+    }
+
+    private void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {
+        GL.Begin(GL.LINES);
+        GL.Color(Color.green);
+
+        foreach (var kvp in Data.StargateInfos) {
+            foreach (var stargateInfo in kvp.Value) {
+                if (!systems.TryGetValue(stargateInfo.system_id, out UISystem startSystem)) continue;
+                if (!systems.TryGetValue(stargateInfo.destination.system_id, out UISystem destinationSystem)) continue;
+
+                var startPosition = startSystem.transform.position;
+                var endPosition = destinationSystem.transform.position;
+
+                GL.Vertex(startPosition);
+                GL.Vertex(endPosition);
             }
         }
 
+        GL.End();
+    }
 
+    public void SetDrawAllStargateConnections(bool value) {
+        DrawAllStargateConnections = value;
     }
 
     public void SwitchTo2DMode() {
-        Debug.Log($"Switching to 2D Mode");
 
         foreach (var kvp in systems) {
             var system = kvp.Value;
@@ -150,11 +208,11 @@ public class Map : Singleton<Map> {
 
             // Update progress bar via callback
             progress.Report(((float)systemsDisplayed / total, $"Loading {systemInfo.name}"));
-            
+
             // Smooth out the spawning a bit
             systemsDisplayedThisBatch++;
 
-            if (systemsDisplayedThisBatch > 20) {
+            if (systemsDisplayedThisBatch > SystemSpawnBatchCount) {
                 systemsDisplayedThisBatch = 0;
                 await UniTask.NextFrame();
             }

@@ -25,6 +25,10 @@ namespace _ProjectEvE.Scripts.UX {
             model.material.color = GetColorFromSecurityStatus(systemInfo.security_status);
         }
 
+        private void Update() {
+            
+        }
+
         private void OnMouseDown() {
             if (Time.time - lastClickTime <= DoubleClickDelay) {
                 Debug.Log($"Double clicked!");

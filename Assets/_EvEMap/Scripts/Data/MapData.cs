@@ -7,51 +7,33 @@ using Cysharp.Threading.Tasks;
 using Evo.UI;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Constants = _EvEMap.Scripts.Core.Constants;
 
 namespace _ProjectEvE.Scripts.Data {
     [CreateAssetMenu(menuName = "EvE Map/Data", fileName = "Map Data")]
     public class MapData : SerializedScriptableObject {
-        public List<long> ConstellationIDs {
-            get {
-                if (constellationIDs != null && constellationIDs.Count == Constants.ConstellationCount) {
-                    return constellationIDs;
-                }
-                else {
-                    if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.ConstellationIDsKey)) {
-                        Debug.Log($"Loading Constellation IDs from file");
-                        constellationIDs = ES3.Load<List<long>>(Constants.ConstellationIDsKey, Constants.SaveFileName);
-                    }
-
-                    if (constellationIDs == null) {
-                        Debug.Log($"Failed to load ConstellationIDs from disk. Unable to rebuild here. ");
-                    }
-
-                    return new List<long>();
-                }
-            }
-            set { constellationIDs = value; }
-        }
-        [SerializeField] private List<long> constellationIDs;
+        public List<long> ConstellationIDs;
         public List<long> RegionIDs;
         public List<long> SystemIDs;
-        [HideInInspector] public Dictionary<long, ConstellationInfo> ConstellationInfos = new();
-        [HideInInspector] public Dictionary<long, RegionInfo> RegionInfos = new();
-        [HideInInspector] public Dictionary<long, SystemInfo> SystemInfos = new();
-        [HideInInspector] public Dictionary<long, List<StargateInfo>> StargateInfos = new();
+        public Dictionary<long, ConstellationInfo> ConstellationInfos = new();
+        public Dictionary<long, RegionInfo> RegionInfos = new();
+        public Dictionary<long, SystemInfo> SystemInfos = new();
+        public Dictionary<long, List<StargateInfo>> StargateInfos = new();
+        public Dictionary<long, PlanetInfo> PlanetInfos = new();
 
         public async UniTask InitializeMapData(Progress<(float value, string message)> progress, HttpClient client = null) {
             client ??= new HttpClient();
 
             // Constellation IDs
-            if (constellationIDs.Count < Constants.ConstellationCount) {
+            if (ConstellationIDs.Count < Constants.ConstellationCount) {
                 if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.ConstellationIDsKey)) {
                     Debug.Log($"Loading Constellation IDs from file");
-                    constellationIDs = ES3.Load<List<long>>(Constants.ConstellationIDsKey);
+                    ConstellationIDs = ES3.Load<List<long>>(Constants.ConstellationIDsKey);
                 }
                 else {
                     Debug.Log($"Pulling Constellation IDs from EvE");
-                    constellationIDs = await GetConstellationIDs(client);
+                    ConstellationIDs = await GetConstellationIDs(progress, client);
                     ES3.Save(Constants.ConstellationIDsKey, ConstellationIDs);
                 }
             }
@@ -117,13 +99,13 @@ namespace _ProjectEvE.Scripts.Data {
                 }
                 else {
                     Debug.Log($"Pulling System Infos from EvE");
-                    SystemInfos = await GetKspaceInfos(SystemIDs, client);
+                    SystemInfos = await GetKspaceSystemInfos(SystemIDs, client);
                     ES3.Save(Constants.SystemInfosKey, SystemInfos, Constants.SaveFileName);
                 }
             }
-            
+
             // Stargate Infos
-            if (StargateInfos == null ||StargateInfos.Count < Constants.StargatesCount) {
+            if (StargateInfos == null || StargateInfos.Count < Constants.StargatesCount) {
                 if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.StargateInfosKey)) {
                     Debug.Log($"Loading Stargate Infos from file");
                     StargateInfos = ES3.Load<Dictionary<long, List<StargateInfo>>>(Constants.StargateInfosKey, Constants.SaveFileName);
@@ -134,10 +116,23 @@ namespace _ProjectEvE.Scripts.Data {
                     ES3.Save(Constants.StargateInfosKey, StargateInfos, Constants.SaveFileName);
                 }
             }
+
+            // Planet Infos
+            if (PlanetInfos == null || PlanetInfos.Count < Constants.PlanetsCount) {
+                if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.PlanetInfosKey, Constants.SaveFileName)) {
+                    Debug.Log($"Loading Planet Infos from file");
+                    PlanetInfos = ES3.Load<Dictionary<long, PlanetInfo>>(Constants.PlanetInfosKey, Constants.SaveFileName);
+                }
+                else {
+                    Debug.Log($"Pulling Planet Infos from EvE");
+                    PlanetInfos = await GetPlanetInfosAsync(progress, SystemIDs, client);
+                    ES3.Save(Constants.PlanetInfosKey, PlanetInfos, Constants.SaveFileName);
+                }
+            }
         }
 
 
-        public async UniTask<List<long>> GetConstellationIDs(HttpClient client = null) {
+        public async UniTask<List<long>> GetConstellationIDs(Progress<(float value, string message)> progress, HttpClient client = null) {
             client ??= new HttpClient();
             List<long> returnValue = new();
 
@@ -323,7 +318,7 @@ namespace _ProjectEvE.Scripts.Data {
 
             for (int index = 0; index < systemIDs.Count; index++) {
                 long systemID = systemIDs[index];
-                
+
                 if (SystemInfos.TryGetValue(systemID, out SystemInfo systemInfo)) {
                     var stargateInfos = await GetStargateInfosForSystem(systemInfo, client);
                     progress.Report(((float)index / systemIDs.Count, $"Getting Stargate info for {systemInfo.name}"));
@@ -336,6 +331,67 @@ namespace _ProjectEvE.Scripts.Data {
             }
 
             return returnValue;
+        }
+
+        public async UniTask<Dictionary<long, PlanetInfo>> GetPlanetInfosAsync(IProgress<(float progress, string message)> progress,
+                                                                               List<long> systemIDs,
+                                                                               HttpClient client = null) {
+            client ??= new HttpClient();
+            Dictionary<long, PlanetInfo> returnValue = new();
+
+            for (int i = 0; i < systemIDs.Count; i++) {
+                long systemID = systemIDs[i];
+                
+
+                if (SystemInfos.TryGetValue(systemID, out SystemInfo systemInfo) && systemInfo.planets != null) {
+                    progress.Report(((float)i / systemIDs.Count, $"Loading Planet Infos... System: {systemInfo.name}"));
+                    for (int j = 0; j < systemInfo.planets.Length; j++) {
+                        var planet = systemInfo.planets[j];
+                        var planetInfo = await GetPlanetInfo(planet.planet_id, client);
+
+                        if (planetInfo != null) {
+                            returnValue.Add(planet.planet_id, planetInfo);
+                        }
+                    }
+                }
+                else {
+                    Debug.Log($"Failed to find SystemID ({systemID}) in SystemInfos");
+                    continue;
+                }
+            }
+
+            return returnValue;
+        }
+
+        public async UniTask<PlanetInfo> GetPlanetInfo(long planetID, HttpClient client = null) {
+            client ??= new HttpClient();
+            var request = new HttpRequestMessage {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri($"https://esi.evetech.net/universe/planets/{planetID}"),
+                Headers = {
+                    {
+                        "Accept-Language", "en"
+                    }, {
+                        "X-Compatibility-Date", "2025-12-16"
+                    }, {
+                        "X-Tenant", ""
+                    }, {
+                        "Accept", "application/json"
+                    },
+                },
+            };
+
+            using (var response = await client.SendAsync(request)) {
+                response.EnsureSuccessStatusCode();
+                var body = await response.Content.ReadAsStringAsync();
+                PlanetInfo planetInfo = JsonUtility.FromJson<PlanetInfo>(body);
+
+                if (planetInfo == null) {
+                    Debug.Log($"Failed to parse PlanetID: {planetID}");
+                }
+
+                return planetInfo;
+            }
         }
 
         public async UniTask<List<StargateInfo>> GetStargateInfosForSystem(SystemInfo systemInfo, HttpClient client = null) {
@@ -392,7 +448,7 @@ namespace _ProjectEvE.Scripts.Data {
         /// <param name="systemIDs"></param>
         /// <param name="httpClient"></param>
         /// <returns></returns>
-        public async UniTask<SystemInfosDictionary> GetKspaceInfos(List<long> systemIDs, HttpClient client = null, ProgressBar progressBar = null) {
+        public async UniTask<SystemInfosDictionary> GetKspaceSystemInfos(List<long> systemIDs, HttpClient client = null, ProgressBar progressBar = null) {
             UIManager.Instance.SetProgressBarVisibility(true);
             SystemInfosDictionary returnValue = new();
             client ??= new HttpClient();

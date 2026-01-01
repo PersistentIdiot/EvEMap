@@ -7,5 +7,6 @@ namespace _ProjectEvE.Scripts.UX {
         public Switch Switch;
         public TextMeshProUGUI LabelText;
         public TextMeshProUGUI DetailsText;
+        public ProgressBar ProgressBar;
     }
 }
