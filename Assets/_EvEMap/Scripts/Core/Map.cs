@@ -147,20 +147,6 @@ public class Map : Singleton<Map> {
         amount = Mathf.Clamp(amount, MinZoomAmount, MaxZoomAmount);
 
         transform.DOScale(Vector3.one * amount, 1f);
-        /*
-        foreach (var kvp in systems) {
-            var system = kvp.Value;
-            var systemInfo = system.SystemInfo;
-            var endPosition = MapMode switch {
-                MapModes.TwoDimensions => Get2DVectorFromPosition(systemInfo.position) * amount,
-                MapModes.ThreeDimensions => Get3DVectorFromPosition(systemInfo.position) * amount,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-
-            DOTween.Kill(system.transform);
-            system.transform.DOMove(endPosition, 0.25f, true);
-        }
-        */
     }
 
     private async UniTask InitializeDisplay() {
@@ -231,6 +217,12 @@ public class Map : Singleton<Map> {
         system.SetSelected(true);
         UIManager.Instance.HideSystemInfo();
         await UIManager.Instance.ShowSystemInfo(system.SystemInfo, system.transform.position);
+        UISystemInfoPanel.InitSystemInfo(system.SystemInfo);
+    }
+
+    public void DeselectSystem(UISystem system) {
+        system.SetSelected(false);
+        selectedSystem = null;
     }
 
     public static Vector3 Get3DVectorFromPosition(Position position) {

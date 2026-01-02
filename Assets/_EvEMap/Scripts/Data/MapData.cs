@@ -16,11 +16,13 @@ namespace _ProjectEvE.Scripts.Data {
         public List<long> ConstellationIDs;
         public List<long> RegionIDs;
         public List<long> SystemIDs;
+        public List<long> TypeIDs;
         public Dictionary<long, ConstellationInfo> ConstellationInfos = new();
         public Dictionary<long, RegionInfo> RegionInfos = new();
         public Dictionary<long, SystemInfo> SystemInfos = new();
         public Dictionary<long, List<StargateInfo>> StargateInfos = new();
         public Dictionary<long, PlanetInfo> PlanetInfos = new();
+        public Dictionary<long, TypeInfo> TypeInfos = new();
 
         public async UniTask InitializeMapData(Progress<(float value, string message)> progress, HttpClient client = null) {
             client ??= new HttpClient();
@@ -91,6 +93,19 @@ namespace _ProjectEvE.Scripts.Data {
                 }
             }
 
+            // Type IDs
+            if (TypeIDs.Count < Constants.TypeIDsCount) {
+                if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.TypeIDsKey, Constants.SaveFileName)) {
+                    Debug.Log($"Loading Type IDs from file");
+                    TypeIDs = ES3.Load<List<long>>(Constants.TypeIDsKey, Constants.SaveFileName);
+                }
+                else {
+                    Debug.Log($"Pulling Type IDs from EvE");
+                    TypeIDs = await GetTypeIDsAsync(progress, client);
+                    ES3.Save(Constants.TypeIDsKey, TypeIDs, Constants.SaveFileName);
+                }
+            }
+
             // SystemInfos
             if (SystemInfos.Count < Constants.SystemCount) {
                 if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.SystemInfosKey)) {
@@ -129,6 +144,17 @@ namespace _ProjectEvE.Scripts.Data {
                     ES3.Save(Constants.PlanetInfosKey, PlanetInfos, Constants.SaveFileName);
                 }
             }
+
+            // Type Infos
+            if (TypeInfos == null || TypeInfos.Count < Constants.TypeIDsCount) {
+                if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.TypeInfosKey, Constants.SaveFileName)) {
+                    Debug.Log($"Loading Type IDs from file");
+                    TypeInfos = ES3.Load<Dictionary<long, TypeInfo>>(Constants.TypeInfosKey, Constants.SaveFileName);
+                }
+                else {
+                    Debug.Log($"ToDo: Get Type Infos");
+                }
+            }
         }
 
 
@@ -140,21 +166,17 @@ namespace _ProjectEvE.Scripts.Data {
                 Method = HttpMethod.Get,
                 RequestUri = new Uri("https://esi.evetech.net/universe/constellations"),
                 Headers = {
-                    {
-                        "Accept-Language", "en"
-                    }, {
-                        "X-Compatibility-Date", "2025-12-16"
-                    }, {
-                        "X-Tenant", ""
-                    }, {
-                        "Accept", "application/json"
-                    },
+                    { "Accept-Language", "en" },
+                    { "X-Compatibility-Date", "2025-12-16" },
+                    { "X-Tenant", "" },
+                    { "Accept", "application/json" },
                 },
             };
 
             using (var response = await client.SendAsync(request)) {
                 response.EnsureSuccessStatusCode();
                 var body = await response.Content.ReadAsStringAsync();
+                body.Remove('[').Remove(']');
                 var constellationIDStrings = body.Split(',');
 
                 for (int index = 0; index < constellationIDStrings.Length; index++) {
@@ -198,15 +220,10 @@ namespace _ProjectEvE.Scripts.Data {
                 Method = HttpMethod.Get,
                 RequestUri = new Uri($"https://esi.evetech.net/universe/constellations/{systemID}"),
                 Headers = {
-                    {
-                        "Accept-Language", "en"
-                    }, {
-                        "X-Compatibility-Date", "2025-12-16"
-                    }, {
-                        "X-Tenant", ""
-                    }, {
-                        "Accept", "application/json"
-                    },
+                    { "Accept-Language", "en" },
+                    { "X-Compatibility-Date", "2025-12-16" },
+                    { "X-Tenant", "" },
+                    { "Accept", "application/json" },
                 },
             };
 
@@ -241,15 +258,10 @@ namespace _ProjectEvE.Scripts.Data {
                 Method = HttpMethod.Get,
                 RequestUri = new Uri($"https://esi.evetech.net/universe/regions/{regionID}"),
                 Headers = {
-                    {
-                        "Accept-Language", "en"
-                    }, {
-                        "X-Compatibility-Date", "2025-12-16"
-                    }, {
-                        "X-Tenant", ""
-                    }, {
-                        "Accept", "application/json"
-                    },
+                    { "Accept-Language", "en" },
+                    { "X-Compatibility-Date", "2025-12-16" },
+                    { "X-Tenant", "" },
+                    { "Accept", "application/json" },
                 },
             };
 
@@ -269,15 +281,10 @@ namespace _ProjectEvE.Scripts.Data {
                 Method = HttpMethod.Get,
                 RequestUri = new Uri("https://esi.evetech.net/universe/systems"),
                 Headers = {
-                    {
-                        "Accept-Language", "en"
-                    }, {
-                        "X-Compatibility-Date", "2025-12-16"
-                    }, {
-                        "X-Tenant", ""
-                    }, {
-                        "Accept", "application/json"
-                    },
+                    { "Accept-Language", "en" },
+                    { "X-Compatibility-Date", "2025-12-16" },
+                    { "X-Tenant", "" },
+                    { "Accept", "application/json" },
                 },
             };
 
@@ -341,10 +348,11 @@ namespace _ProjectEvE.Scripts.Data {
 
             for (int i = 0; i < systemIDs.Count; i++) {
                 long systemID = systemIDs[i];
-                
+
 
                 if (SystemInfos.TryGetValue(systemID, out SystemInfo systemInfo) && systemInfo.planets != null) {
                     progress.Report(((float)i / systemIDs.Count, $"Loading Planet Infos... System: {systemInfo.name}"));
+
                     for (int j = 0; j < systemInfo.planets.Length; j++) {
                         var planet = systemInfo.planets[j];
                         var planetInfo = await GetPlanetInfo(planet.planet_id, client);
@@ -369,15 +377,10 @@ namespace _ProjectEvE.Scripts.Data {
                 Method = HttpMethod.Get,
                 RequestUri = new Uri($"https://esi.evetech.net/universe/planets/{planetID}"),
                 Headers = {
-                    {
-                        "Accept-Language", "en"
-                    }, {
-                        "X-Compatibility-Date", "2025-12-16"
-                    }, {
-                        "X-Tenant", ""
-                    }, {
-                        "Accept", "application/json"
-                    },
+                    { "Accept-Language", "en" },
+                    { "X-Compatibility-Date", "2025-12-16" },
+                    { "X-Tenant", "" },
+                    { "Accept", "application/json" },
                 },
             };
 
@@ -410,15 +413,10 @@ namespace _ProjectEvE.Scripts.Data {
                     Method = HttpMethod.Get,
                     RequestUri = new Uri($"https://esi.evetech.net/universe/stargates/{ID}"),
                     Headers = {
-                        {
-                            "Accept-Language", "en"
-                        }, {
-                            "X-Compatibility-Date", "2025-12-16"
-                        }, {
-                            "X-Tenant", ""
-                        }, {
-                            "Accept", "application/json"
-                        },
+                        { "Accept-Language", "en" },
+                        { "X-Compatibility-Date", "2025-12-16" },
+                        { "X-Tenant", "" },
+                        { "Accept", "application/json" },
                     },
                 };
 
@@ -474,15 +472,10 @@ namespace _ProjectEvE.Scripts.Data {
                 Method = HttpMethod.Get,
                 RequestUri = new Uri($"https://esi.evetech.net/universe/systems/{systemID}"),
                 Headers = {
-                    {
-                        "Accept-Language", "en"
-                    }, {
-                        "X-Compatibility-Date", "2025-12-16"
-                    }, {
-                        "X-Tenant", ""
-                    }, {
-                        "Accept", "application/json"
-                    },
+                    { "Accept-Language", "en" },
+                    { "X-Compatibility-Date", "2025-12-16" },
+                    { "X-Tenant", "" },
+                    { "Accept", "application/json" },
                 },
             };
 
@@ -504,6 +497,27 @@ namespace _ProjectEvE.Scripts.Data {
 
         }
 
+        public async UniTask<TypeInfo> GetTypeInfo(long typeID, HttpClient client = null) {
+            client ??= new HttpClient();
+            var request = new HttpRequestMessage {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri($"https://esi.evetech.net/universe/types/{typeID}"),
+                Headers = {
+                    { "Accept-Language", "en" },
+                    { "X-Compatibility-Date", "2025-12-16" },
+                    { "X-Tenant", "" },
+                    { "Accept", "application/json" },
+                },
+            };
+
+            using (var response = await client.SendAsync(request)) {
+                response.EnsureSuccessStatusCode();
+                var body = await response.Content.ReadAsStringAsync();
+                TypeInfo returnValue = JsonUtility.FromJson<TypeInfo>(body);
+                return returnValue;
+            }
+        }
+
         public async UniTask<List<long>> GetRegionIDs(HttpClient client = null) {
             UIManager.Instance.SetProgressBarVisibility(true);
             List<long> returnValue = new();
@@ -512,15 +526,10 @@ namespace _ProjectEvE.Scripts.Data {
                 Method = HttpMethod.Get,
                 RequestUri = new Uri("https://esi.evetech.net/universe/regions"),
                 Headers = {
-                    {
-                        "Accept-Language", "en"
-                    }, {
-                        "X-Compatibility-Date", "2025-12-16"
-                    }, {
-                        "X-Tenant", ""
-                    }, {
-                        "Accept", "application/json"
-                    },
+                    { "Accept-Language", "en" },
+                    { "X-Compatibility-Date", "2025-12-16" },
+                    { "X-Tenant", "" },
+                    { "Accept", "application/json" },
                 },
             };
 
@@ -547,6 +556,52 @@ namespace _ProjectEvE.Scripts.Data {
             }
 
             UIManager.Instance.SetProgressBarVisibility(false);
+            return returnValue;
+        }
+
+        public async UniTask<List<long>> GetTypeIDsAsync(IProgress<(float progress, string message)> progress, HttpClient client = null) {
+            client ??= new HttpClient();
+            List<long> returnValue = new();
+
+            for (int index = 1; index < Constants.TypedIDsPagesCount; index++) {
+                var typeIDsFromPage = await GetTypeIDsFromPage(index, client);
+                progress.Report(((float)index/Constants.TypedIDsPagesCount, $"Getting Type IDs Page {index}"));
+                returnValue.AddRange(typeIDsFromPage);
+            }
+
+            return returnValue;
+        }
+
+        public async UniTask<List<long>> GetTypeIDsFromPage(int page, HttpClient client = null) {
+            client ??= new HttpClient();
+            List<long> returnValue = new();
+            var request = new HttpRequestMessage {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri($"https://esi.evetech.net/universe/types?page={page}"),
+                Headers = {
+                    { "Accept-Language", "en" },
+                    { "X-Compatibility-Date", "2025-12-16" },
+                    { "X-Tenant", "" },
+                    { "Accept", "application/json" },
+                },
+            };
+
+            using (var response = await client.SendAsync(request)) {
+                response.EnsureSuccessStatusCode();
+                var body = await response.Content.ReadAsStringAsync();
+                body.Remove('[').Remove(']');
+                var typeIDStrings = body.Split(',');
+
+                foreach (var typeIDString in typeIDStrings) {
+                    if (long.TryParse(typeIDString, out long typeID)) {
+                        returnValue.Add(typeID);
+                    }
+                    else {
+                        Debug.Log($"Failed to parse Type ID: {typeIDString}");
+                    }
+                }
+            }
+
             return returnValue;
         }
     }
