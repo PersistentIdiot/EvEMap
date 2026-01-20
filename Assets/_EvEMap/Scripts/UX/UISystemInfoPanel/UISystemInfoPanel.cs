@@ -16,7 +16,7 @@ namespace _ProjectEvE.Scripts.UX {
 
         private Data.SystemInfo currentSystem;
 
-        
+
         public static void InitSystemInfo(Data.SystemInfo systemInfo) {
             Instance.currentSystem = systemInfo;
             Instance.InitInfoDisplay().Forget();
@@ -32,18 +32,22 @@ namespace _ProjectEvE.Scripts.UX {
 
         private async UniTask InitInfoDisplay() {
             ClearInfoDisplay();
-            
+            SetVisibility(true);
             // Load planet info
-            foreach (var planet in currentSystem.planets) {
+            for (int index = 0; index < currentSystem.planets.Length; index++) {
+                var planet = currentSystem.planets[index];
+
                 if (Map.Data.PlanetInfos.TryGetValue(planet.planet_id, out PlanetInfo planetInfo)) {
                     var uiPlanetInfo = Instantiate(planetInfoPrefab, planetInfoContainer);
-                    await uiPlanetInfo.InitPlanetInfo(planetInfo);
+                    uiPlanetInfo.SetNameText($"{planetInfo.name}");
+                    await uiPlanetInfo.InitPlanetInfo(planetInfo, index+1);
                 }
                 else {
                     Debug.Log($"Failed to get PlanetInfo for Planet ID: {planet.planet_id}");
                 }
             }
-            SetVisibility(true);
+
+            
         }
 
         private void ClearInfoDisplay() {

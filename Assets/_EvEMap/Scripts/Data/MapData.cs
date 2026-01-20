@@ -53,7 +53,6 @@ namespace _ProjectEvE.Scripts.Data {
                 }
             }
 
-
             // Region IDS
             if (RegionIDs.Count < Constants.RegionCount) {
                 if (ES3.FileExists(Constants.SaveFileName) && ES3.KeyExists(Constants.RegionIDsKey)) {
@@ -152,7 +151,9 @@ namespace _ProjectEvE.Scripts.Data {
                     TypeInfos = ES3.Load<Dictionary<long, TypeInfo>>(Constants.TypeInfosKey, Constants.SaveFileName);
                 }
                 else {
-                    Debug.Log($"ToDo: Get Type Infos");
+                    Debug.Log($"Pulling Type Infos from EvE");
+                    TypeInfos = await GetTypeInfosAsync(TypeIDs, progress, client);
+                    ES3.Save(Constants.TypeInfosKey, TypeInfos, Constants.SaveFileName);
                 }
             }
         }
@@ -497,6 +498,21 @@ namespace _ProjectEvE.Scripts.Data {
 
         }
 
+        public async UniTask<Dictionary<long, TypeInfo>> GetTypeInfosAsync(List<long> typeIDs, IProgress<(float progress, string message)> progress, HttpClient client = null) {
+            Dictionary<long, TypeInfo> returnValue = new();
+
+            for (int index = 0; index < typeIDs.Count; index++) {
+                var typeID = TypeIDs[index];
+                var typeInfo = await GetTypeInfo(typeID, client);
+
+                Debug.Assert(typeInfo != null);
+                returnValue.Add(typeID, typeInfo);
+                progress.Report(((float)index / typeIDs.Count, $"Getting Type Info for {typeInfo.name}"));
+            }
+
+            return returnValue;
+        }
+
         public async UniTask<TypeInfo> GetTypeInfo(long typeID, HttpClient client = null) {
             client ??= new HttpClient();
             var request = new HttpRequestMessage {
@@ -510,11 +526,17 @@ namespace _ProjectEvE.Scripts.Data {
                 },
             };
 
-            using (var response = await client.SendAsync(request)) {
-                response.EnsureSuccessStatusCode();
-                var body = await response.Content.ReadAsStringAsync();
-                TypeInfo returnValue = JsonUtility.FromJson<TypeInfo>(body);
-                return returnValue;
+            // If TypeInfo is cached, use it; else pull it from EvE
+            if (TypeInfos.TryGetValue(typeID, out TypeInfo typeInfo)) {
+                return typeInfo;
+            }
+            else {
+                using (var response = await client.SendAsync(request)) {
+                    response.EnsureSuccessStatusCode();
+                    var body = await response.Content.ReadAsStringAsync();
+                    TypeInfo returnValue = JsonUtility.FromJson<TypeInfo>(body);
+                    return returnValue;
+                }
             }
         }
 
@@ -565,7 +587,7 @@ namespace _ProjectEvE.Scripts.Data {
 
             for (int index = 1; index < Constants.TypedIDsPagesCount; index++) {
                 var typeIDsFromPage = await GetTypeIDsFromPage(index, client);
-                progress.Report(((float)index/Constants.TypedIDsPagesCount, $"Getting Type IDs Page {index}"));
+                progress.Report(((float)index / Constants.TypedIDsPagesCount, $"Getting Type IDs Page {index}"));
                 returnValue.AddRange(typeIDsFromPage);
             }
 
